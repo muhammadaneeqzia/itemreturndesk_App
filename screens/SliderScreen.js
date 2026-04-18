@@ -11,6 +11,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
 import BubblesBackground from '../components/BubblesBackground';
+import AppIcon from '../components/AppIcon';
 
 const ONBOARDING_COMPLETED_KEY = '@app_onboarding_completed';
 
@@ -21,19 +22,19 @@ const slides = [
     id: '1',
     title: 'Lost & Found Made Easy',
     description: 'Quickly report lost items or items you found on campus. Connect with others instantly.',
-    icon: '🔍',
+    iconName: 'search',
   },
   {
     id: '2',
     title: 'Smart Search & Filters',
     description: 'Find what you need with powerful search and filters by category, location, and time.',
-    icon: '📱',
+    iconName: 'options',
   },
   {
     id: '3',
     title: 'Safe & Private',
     description: 'Contact finders securely through the app without sharing personal contact details.',
-    icon: '🔒',
+    iconName: 'lockClosedOutline',
   },
 ];
 
@@ -96,7 +97,9 @@ const SliderScreen = ({ navigation }) => {
             },
           ]}
         >
-          <Text style={styles.icon}>{item.icon}</Text>
+          <View style={[styles.iconCircle, { backgroundColor: colors.primary + '22' }]}>
+            <AppIcon name={item.iconName} size={56} color={colors.primary} />
+          </View>
           <Text style={[styles.title, { color: colors.text }]}>
             {item.title}
           </Text>
@@ -237,8 +240,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 1,
   },
-  icon: {
-    fontSize: 80,
+  iconCircle: {
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 30,
   },
   title: {

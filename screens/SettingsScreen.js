@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,44 +6,47 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
-  Alert,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { useToast } from '../context/ToastContext';
-import { userService } from '../lib/services/users/userService';
+import { useNotifications } from '../context/NotificationContext';
+import { useAppModal } from '../context/ModalContext';
 import { authService } from '../lib/services/auth/authService';
+import AppIcon from '../components/AppIcon';
+import ScreenHeader from '../components/ScreenHeader';
+import { radii, shadowSoft, space } from '../utils/layout';
 
 const SettingsScreen = () => {
   const { colors, isDark, toggleTheme } = useTheme();
   const { logout, isAdmin, user } = useAuth();
   const { showToast } = useToast();
+  const { notificationsEnabled, setNotificationsEnabled, prefsHydrated } = useNotifications();
+  const { showAlert, showConfirm, showModal } = useAppModal();
   const navigation = useNavigation();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [pushNotifications, setPushNotifications] = useState(true);
 
-  // Load notification preferences from user profile (if stored)
-  useEffect(() => {
-    // For now, we'll use local state
-    // In future, can add notification_preferences field to profiles table
-  }, []);
-
-  const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-        },
-      },
-    ]);
+  const onToggleNotifications = async (value) => {
+    const result = await setNotificationsEnabled(value);
+    if (!result.ok && result.reason === 'permission_denied') {
+      showToast('Allow notifications in system settings to turn this on', 'error');
+    }
   };
 
-  const renderSettingItem = (icon, title, subtitle, onPress, showArrow = true, rightComponent = null) => (
+  const handleLogout = () => {
+    showConfirm({
+      title: 'Logout',
+      message: 'Are you sure you want to logout?',
+      cancelText: 'Cancel',
+      confirmText: 'Logout',
+      destructive: true,
+      onConfirm: async () => {
+        await logout();
+      },
+    });
+  };
+
+  const renderSettingItem = (iconName, title, subtitle, onPress, showArrow = true, rightComponent = null) => (
     <TouchableOpacity
       style={[styles.settingItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
       onPress={onPress}
@@ -51,7 +54,9 @@ const SettingsScreen = () => {
       disabled={!onPress}
     >
       <View style={styles.settingItemLeft}>
-        <Text style={styles.settingIcon}>{icon}</Text>
+        <View style={[styles.settingIconWrap, { backgroundColor: colors.primary + '14' }]}>
+          <AppIcon name={iconName} size={22} color={colors.primary} />
+        </View>
         <View style={styles.settingItemText}>
           <Text style={[styles.settingItemTitle, { color: colors.text }]}>{title}</Text>
           {subtitle && (
@@ -61,24 +66,17 @@ const SettingsScreen = () => {
           )}
         </View>
       </View>
-      {rightComponent || (showArrow && <Text style={[styles.arrow, { color: colors.textTertiary }]}>→</Text>)}
+      {rightComponent || (showArrow && <AppIcon name="chevronForward" size={20} color={colors.textTertiary} />)}
     </TouchableOpacity>
   );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Custom Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Settings</Text>
-        <View style={styles.backButton} />
-      </View>
+      <ScreenHeader title="Settings" onBack={() => navigation.goBack()} />
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.contentContainer, { paddingTop: 10 }]}
+        contentContainerStyle={[styles.contentContainer, { paddingTop: space.sm }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Appearance Section */}
@@ -90,7 +88,9 @@ const SettingsScreen = () => {
             activeOpacity={0.7}
           >
             <View style={styles.settingItemLeft}>
-              <Text style={styles.settingIcon}>{isDark ? '🌙' : '☀️'}</Text>
+              <View style={[styles.settingIconWrap, { backgroundColor: colors.primary + '14' }]}>
+                <AppIcon name={isDark ? 'moon' : 'sunny'} size={22} color={colors.primary} />
+              </View>
               <View style={styles.settingItemText}>
                 <Text style={[styles.settingItemTitle, { color: colors.text }]}>Theme</Text>
                 <Text style={[styles.settingItemSubtitle, { color: colors.textSecondary }]}>
@@ -107,7 +107,7 @@ const SettingsScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Notifications Section */}
+        {/* Notifications Section — preference stored in AsyncStorage; OS permission when enabling */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Notifications</Text>
           <TouchableOpacity
@@ -115,63 +115,22 @@ const SettingsScreen = () => {
             activeOpacity={1}
           >
             <View style={styles.settingItemLeft}>
-              <Text style={styles.settingIcon}>🔔</Text>
+              <View style={[styles.settingIconWrap, { backgroundColor: colors.primary + '14' }]}>
+                <AppIcon name="notificationsOutline" size={22} color={colors.primary} />
+              </View>
               <View style={styles.settingItemText}>
                 <Text style={[styles.settingItemTitle, { color: colors.text }]}>Enable Notifications</Text>
                 <Text style={[styles.settingItemSubtitle, { color: colors.textSecondary }]}>
-                  Receive push notifications
+                  Alerts for new messages & inbox (saved on this device)
                 </Text>
               </View>
             </View>
             <Switch
               value={notificationsEnabled}
-              onValueChange={setNotificationsEnabled}
+              onValueChange={onToggleNotifications}
+              disabled={!prefsHydrated}
               trackColor={{ false: colors.border, true: colors.primary }}
               thumbColor={colors.textInverse}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.settingItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            activeOpacity={1}
-          >
-            <View style={styles.settingItemLeft}>
-              <Text style={styles.settingIcon}>📧</Text>
-              <View style={styles.settingItemText}>
-                <Text style={[styles.settingItemTitle, { color: colors.text }]}>Email Notifications</Text>
-                <Text style={[styles.settingItemSubtitle, { color: colors.textSecondary }]}>
-                  Get updates via email
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={emailNotifications}
-              onValueChange={setEmailNotifications}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.textInverse}
-              disabled={!notificationsEnabled}
-            />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.settingItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            activeOpacity={1}
-          >
-            <View style={styles.settingItemLeft}>
-              <Text style={styles.settingIcon}>📱</Text>
-              <View style={styles.settingItemText}>
-                <Text style={[styles.settingItemTitle, { color: colors.text }]}>Push Notifications</Text>
-                <Text style={[styles.settingItemSubtitle, { color: colors.textSecondary }]}>
-                  Receive instant alerts
-                </Text>
-              </View>
-            </View>
-            <Switch
-              value={pushNotifications}
-              onValueChange={setPushNotifications}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.textInverse}
-              disabled={!notificationsEnabled}
             />
           </TouchableOpacity>
         </View>
@@ -179,83 +138,81 @@ const SettingsScreen = () => {
         {/* Account Section */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Account</Text>
-          {renderSettingItem('👤', 'Edit Profile', 'Update your personal information', () =>
+          {renderSettingItem('personOutline', 'Edit Profile', 'Update your personal information', () =>
             navigation.navigate('EditProfile')
           )}
-          {renderSettingItem('🔒', 'Change Password', 'Update your password', () => {
-            Alert.alert(
-              'Change Password',
-              'This feature will allow you to update your password. For security, please use the password reset option in the login screen.',
-              [
-                { text: 'OK', style: 'default' },
+          {renderSettingItem('lockClosedOutline', 'Change Password', 'Update your password', () => {
+            showModal({
+              title: 'Change Password',
+              message:
+                'This feature will allow you to update your password. For security, please use the password reset option in the login screen.',
+              buttons: [
+                { text: 'OK', variant: 'cancel' },
                 {
                   text: 'Reset Password',
+                  variant: 'primary',
                   onPress: async () => {
-                    if (user?.email) {
-                      try {
-                        const result = await authService.resetPassword(user.email);
-                        if (result.success) {
-                          Alert.alert(
-                            'Email Sent',
-                            'Password reset instructions have been sent to your email address.',
-                            [{ text: 'OK' }]
-                          );
-                        } else {
-                          showToast(result.error || 'Failed to send reset email', 'error');
-                        }
-                      } catch (error) {
-                        showToast('An error occurred', 'error');
+                    if (!user?.email) return;
+                    try {
+                      const result = await authService.requestPasswordReset(user.email);
+                      if (result.success) {
+                        setTimeout(
+                          () =>
+                            showAlert(
+                              'Email Sent',
+                              'Password reset instructions have been sent to your email address.'
+                            ),
+                          320
+                        );
+                      } else {
+                        showToast(result.error || 'Failed to send reset email', 'error');
                       }
+                    } catch (error) {
+                      showToast('An error occurred', 'error');
                     }
                   },
                 },
-              ]
-            );
+              ],
+            });
           })}
-          {renderSettingItem('📧', 'Email Settings', 'Manage email preferences', () =>
-            Alert.alert('Info', 'Email settings feature coming soon')
+          {renderSettingItem('mailOutline', 'Email Settings', 'Manage email preferences', () =>
+            showAlert('Info', 'Email settings feature coming soon')
           )}
         </View>
 
         {/* Privacy & Security Section */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Privacy & Security</Text>
-          {renderSettingItem('🔐', 'Privacy Settings', 'Control your privacy', () =>
-            Alert.alert('Info', 'Privacy settings coming soon')
+          {renderSettingItem('shieldCheckmark', 'Privacy Settings', 'Control your privacy', () =>
+            navigation.navigate('PrivacySettings')
           )}
-          {renderSettingItem('🛡️', 'Security', 'Manage security options', () =>
-            Alert.alert('Info', 'Security settings coming soon')
+          {renderSettingItem('shield', 'Security', 'Manage security options', () =>
+            navigation.navigate('SecuritySettings')
           )}
-          {renderSettingItem('📝', 'Terms & Privacy', 'Read our terms and privacy policy', () =>
-            Alert.alert('Info', 'Terms & Privacy coming soon')
+          {renderSettingItem('documentTextOutline', 'Terms & Privacy', 'Read our terms and privacy policy', () =>
+            navigation.navigate('TermsPrivacy')
           )}
         </View>
 
         {/* General Section */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>General</Text>
-          {renderSettingItem('🌐', 'Language', 'English', () =>
-            Alert.alert('Info', 'Language settings coming soon')
+          {renderSettingItem('globe', 'Language', 'English', () =>
+            showAlert('Info', 'Language settings coming soon')
           )}
-          {renderSettingItem('💾', 'Storage', 'Manage app storage', () =>
-            Alert.alert('Info', 'Storage settings coming soon')
+          {renderSettingItem('save', 'Storage', 'Manage app storage', () =>
+            showAlert('Info', 'Storage settings coming soon')
           )}
-          {renderSettingItem('🔄', 'Clear Cache', 'Free up storage space', () => {
-            Alert.alert(
-              'Clear Cache',
-              'This will clear cached data. Continue?',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Clear',
-                  onPress: () => {
-                    // Clear cache logic can be added here
-                    // For now, just show success message
-                    showToast('Cache cleared successfully', 'success');
-                  },
-                },
-              ]
-            );
+          {renderSettingItem('refresh', 'Clear Cache', 'Free up storage space', () => {
+            showConfirm({
+              title: 'Clear Cache',
+              message: 'This will clear cached data. Continue?',
+              cancelText: 'Cancel',
+              confirmText: 'Clear',
+              onConfirm: () => {
+                showToast('Cache cleared successfully', 'success');
+              },
+            });
           })}
         </View>
 
@@ -263,7 +220,7 @@ const SettingsScreen = () => {
         {isAdmin && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Admin</Text>
-            {renderSettingItem('🛡️', 'Admin Panel', 'Review posts and manage content', () =>
+            {renderSettingItem('construct', 'Admin Panel', 'Review posts and manage content', () =>
               navigation.navigate('AdminPanel')
             )}
           </View>
@@ -272,17 +229,17 @@ const SettingsScreen = () => {
         {/* Help & Support Section */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Help & Support</Text>
-          {renderSettingItem('❓', 'Help Center', 'Get help and FAQs', () =>
-            Alert.alert('Info', 'Help center coming soon')
+          {renderSettingItem('helpCircleOutline', 'Help Center', 'Get help and FAQs', () =>
+            navigation.navigate('HelpCenter')
           )}
-          {renderSettingItem('📞', 'Contact Support', 'Reach out to our team', () =>
-            Alert.alert('Info', 'Contact support feature coming soon')
+          {renderSettingItem('call', 'Contact Support', 'Reach out to our team', () =>
+            navigation.navigate('ContactSupport')
           )}
-          {renderSettingItem('📚', 'User Guide', 'Learn how to use the app', () =>
-            Alert.alert('Info', 'User guide coming soon')
+          {renderSettingItem('bookOutline', 'User Guide', 'Learn how to use the app', () =>
+            navigation.navigate('UserGuide')
           )}
-          {renderSettingItem('ℹ️', 'About', 'App version and info', () =>
-            Alert.alert('About', 'Item Return Desk\nVersion 1.0.0\n\nYour campus lost & found hub')
+          {renderSettingItem('informationCircle', 'About', 'App version and info', () =>
+            navigation.navigate('AboutApp')
           )}
         </View>
 
@@ -291,6 +248,7 @@ const SettingsScreen = () => {
           style={[styles.logoutButton, { backgroundColor: colors.error }]}
           onPress={handleLogout}
         >
+          <AppIcon name="logOutOutline" size={20} color={colors.textInverse} style={{ marginRight: 8 }} />
           <Text style={[styles.logoutButtonText, { color: colors.textInverse }]}>Logout</Text>
         </TouchableOpacity>
 
@@ -309,34 +267,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingTop: 50,
-    borderBottomWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
   scrollView: {
     flex: 1,
   },
@@ -344,44 +274,46 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   section: {
-    marginTop: 24,
-    paddingHorizontal: 20,
+    marginTop: space.lg,
+    paddingHorizontal: space.md,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 12,
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginBottom: space.sm,
+    opacity: 0.85,
   },
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 10,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    padding: space.md,
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: space.sm,
+    ...shadowSoft,
   },
   settingItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  settingIcon: {
-    fontSize: 24,
-    marginRight: 16,
-    width: 30,
+  settingIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.sm,
+    marginRight: space.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   settingItemText: {
     flex: 1,
   },
   settingItemTitle: {
     fontSize: 16,
-    fontWeight: 'normal',
+    fontWeight: '600',
     marginBottom: 2,
   },
   settingItemSubtitle: {
@@ -392,16 +324,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   logoutButton: {
-    marginHorizontal: 20,
-    marginTop: 30,
-    paddingVertical: 16,
-    borderRadius: 12,
+    marginHorizontal: space.md,
+    marginTop: space.xl,
+    paddingVertical: space.md,
+    borderRadius: radii.md,
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    ...shadowSoft,
   },
   logoutButtonText: {
     fontSize: 16,

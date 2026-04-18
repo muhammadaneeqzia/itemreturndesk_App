@@ -7,6 +7,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import AppIcon from './AppIcon';
 import { useNavigation } from '@react-navigation/native';
 
 const MatchingSuggestions = ({ currentPost, allPosts }) => {
@@ -40,7 +41,10 @@ const MatchingSuggestions = ({ currentPost, allPosts }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.title, { color: colors.text }]}>🔍 Similar Items Found</Text>
+      <View style={styles.titleRow}>
+        <AppIcon name="search" size={20} color={colors.primary} />
+        <Text style={[styles.title, { color: colors.text }]}>Similar items found</Text>
+      </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scrollView}>
         {matches.map((match) => (
           <TouchableOpacity
@@ -74,9 +78,12 @@ const MatchingSuggestions = ({ currentPost, allPosts }) => {
             <Text style={[styles.matchCategory, { color: colors.textSecondary }]}>
               {match.category}
             </Text>
-            <Text style={[styles.matchLocation, { color: colors.textTertiary }]}>
-              📍 {match.location}
-            </Text>
+            <View style={styles.locRow}>
+              <AppIcon name="locationOutline" size={14} color={colors.textTertiary} />
+              <Text style={[styles.matchLocation, { color: colors.textTertiary }]} numberOfLines={1}>
+                {match.location}
+              </Text>
+            </View>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -88,11 +95,22 @@ const styles = StyleSheet.create({
   container: {
     marginVertical: 16,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+    paddingHorizontal: 20,
+  },
+  locRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
   title: {
     fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 12,
-    marginHorizontal: 20,
   },
   scrollView: {
     paddingHorizontal: 20,

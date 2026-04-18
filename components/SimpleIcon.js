@@ -1,39 +1,30 @@
 import React from 'react';
-import { Text, StyleSheet } from 'react-native';
+import AppIcon from './AppIcon';
 
+/**
+ * Tab bar icons — uses {@link AppIcon} with filled/outline by focus.
+ */
 const SimpleIcon = ({ name, size = 24, color, focused }) => {
-  // Simple unicode-based icons that work everywhere
-  const getIcon = () => {
+  const iconName = (() => {
     switch (name) {
       case 'home':
-        return focused ? '⌂' : '⌂'; // Home symbol
+        return focused ? 'home' : 'homeOutline';
       case 'person':
-        return focused ? '☺' : '☻'; // Person symbol
+        return focused ? 'person' : 'personOutline';
       case 'settings':
-        return focused ? '⚙' : '⚙'; // Settings gear
+        return 'options';
       case 'posts':
-        return focused ? '📝' : '📄'; // Posts/Document symbol
+        return focused ? 'layers' : 'layersOutline';
       case 'chat':
-        return focused ? '💬' : '💭'; // Chat/Messages symbol
+        return focused ? 'chatbubbles' : 'chatbubblesOutline';
       case 'notifications':
-        return focused ? '🔔' : '🔕'; // Notifications symbol
+        return focused ? 'notifications' : 'notificationsOutline';
       default:
-        return '•';
+        return 'helpCircleOutline';
     }
-  };
+  })();
 
-  return (
-    <Text style={[styles.icon, { fontSize: size, color, fontWeight: focused ? 'bold' : 'normal' }]}>
-      {getIcon()}
-    </Text>
-  );
+  return <AppIcon name={iconName} size={size} color={color} />;
 };
 
-const styles = StyleSheet.create({
-  icon: {
-    textAlign: 'center',
-  },
-});
-
 export default SimpleIcon;
-

@@ -6,17 +6,23 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
-  KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Keyboard,
+  KeyboardAvoidingView,
 } from 'react-native';
+import { emitChatsConversationsRefresh, emitChatConversationRead } from '../lib/appEvents';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { messageService } from '../lib/services/messages/messageService';
+import ScreenHeader from '../components/ScreenHeader';
+import { radii, shadowSoft, space } from '../utils/layout';
 
 const ChatScreen = () => {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const navigation = useNavigation();
   const route = useRoute();
@@ -25,13 +31,43 @@ const ChatScreen = () => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const flatListRef = useRef(null);
 
   const currentUserId = user?.id;
 
+  // iOS: height only for scroll sync. Android: keyboard height lifts composer (resize + explicit pad is stable in stack).
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const onShow = (e) => {
+      const h = e?.endCoordinates?.height ?? 0;
+      if (Platform.OS === 'android') {
+        setKeyboardHeight(Math.max(0, h));
+      }
+      requestAnimationFrame(() => flatListRef.current?.scrollToEnd({ animated: true }));
+    };
+    const onHide = () => {
+      if (Platform.OS === 'android') {
+        setKeyboardHeight(0);
+      }
+      requestAnimationFrame(() => flatListRef.current?.scrollToEnd({ animated: true }));
+    };
+
+    const subShow = Keyboard.addListener(showEvent, onShow);
+    const subHide = Keyboard.addListener(hideEvent, onHide);
+    return () => {
+      subShow.remove();
+      subHide.remove();
+    };
+  }, []);
+
   // Fetch messages
   const fetchMessages = async () => {
     if (!conversation?.conversationId || !currentUserId) return;
+
+    emitChatConversationRead(conversation.conversationId);
 
     try {
       setLoading(true);
@@ -39,7 +75,12 @@ const ChatScreen = () => {
       if (result.success && result.data) {
         setMessages(result.data);
         // Mark messages as read when viewing conversation
-        await messageService.markAsRead(conversation.conversationId, currentUserId);
+        const readResult = await messageService.markAsRead(conversation.conversationId, currentUserId);
+        if (readResult?.success) {
+          emitChatsConversationsRefresh();
+        } else if (__DEV__ && readResult?.error) {
+          console.warn('markAsRead failed (check messages RLS for participants):', readResult.error);
+        }
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -59,6 +100,15 @@ const ChatScreen = () => {
       if (conversation?.conversationId) {
         fetchMessages();
       }
+      return () => {
+        const cid = conversation?.conversationId;
+        const uid = currentUserId;
+        if (cid && uid) {
+          messageService.markAsRead(cid, uid).then((readResult) => {
+            if (readResult?.success) emitChatsConversationsRefresh();
+          });
+        }
+      };
     }, [conversation?.conversationId, currentUserId])
   );
 
@@ -86,8 +136,8 @@ const ChatScreen = () => {
       );
 
       if (result.success && result.data) {
-        // Add message to local state
         setMessages((prev) => [...prev, result.data]);
+        Keyboard.dismiss();
       } else {
         // Restore message if send failed
         setMessage(messageText);
@@ -163,13 +213,7 @@ const ChatScreen = () => {
   if (!conversation) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Chat</Text>
-          <View style={styles.backButton} />
-        </View>
+        <ScreenHeader title="Chat" onBack={() => navigation.goBack()} />
         <View style={styles.errorContainer}>
           <Text style={[styles.errorText, { color: colors.textSecondary }]}>
             No conversation found
@@ -179,29 +223,13 @@ const ChatScreen = () => {
     );
   }
 
-  return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
-      {/* Custom Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
-            {conversation.userName}
-          </Text>
-          <Text style={[styles.headerSubtitle, { color: colors.textTertiary }]} numberOfLines={1}>
-            {conversation.postTitle}
-          </Text>
-        </View>
-        <View style={styles.backButton} />
-      </View>
+  const composerBottomPad =
+    Platform.OS === 'android'
+      ? (keyboardHeight > 0 ? keyboardHeight : Math.max(insets.bottom, 8))
+      : Math.max(insets.bottom, 10);
 
-      {/* Messages List */}
+  const chatBody = (
+    <>
       {loading && messages.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -209,17 +237,28 @@ const ChatScreen = () => {
       ) : (
         <FlatList
           ref={flatListRef}
+          style={styles.messagesFlex}
           data={messages}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.messagesList}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
       )}
 
-      {/* Message Input */}
-      <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+      <View
+        style={[
+          styles.inputContainer,
+          {
+            backgroundColor: colors.surface,
+            borderTopColor: colors.border,
+            paddingBottom: composerBottomPad,
+          },
+        ]}
+      >
         <TextInput
           style={[
             styles.messageInput,
@@ -253,7 +292,25 @@ const ChatScreen = () => {
           )}
         </TouchableOpacity>
       </View>
-    </KeyboardAvoidingView>
+    </>
+  );
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <ScreenHeader
+        title={conversation.userName}
+        subtitle={conversation.postTitle}
+        onBack={() => navigation.goBack()}
+      />
+
+      {Platform.OS === 'ios' ? (
+        <KeyboardAvoidingView style={styles.keyboardAvoid} behavior="padding" keyboardVerticalOffset={0}>
+          {chatBody}
+        </KeyboardAvoidingView>
+      ) : (
+        <View style={styles.keyboardAvoid}>{chatBody}</View>
+      )}
+    </View>
   );
 };
 
@@ -261,45 +318,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    paddingTop: 50,
-    borderBottomWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  headerCenter: {
+  keyboardAvoid: {
     flex: 1,
-    alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    marginTop: 2,
+  messagesFlex: {
+    flex: 1,
   },
   messagesList: {
-    padding: 16,
-    paddingTop: 20,
+    flexGrow: 1,
+    padding: space.md,
+    paddingTop: space.md,
+    paddingBottom: space.sm,
   },
   messageContainer: {
     marginBottom: 12,
@@ -312,9 +341,9 @@ const styles = StyleSheet.create({
   },
   messageBubble: {
     maxWidth: '75%',
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
+    padding: space.sm,
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -333,29 +362,26 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    padding: 12,
-    borderTopWidth: 1,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
     gap: 10,
   },
   messageInput: {
     flex: 1,
     minHeight: 44,
     maxHeight: 100,
-    borderWidth: 1,
-    borderRadius: 22,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.xl,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
     fontSize: 16,
   },
   sendButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 22,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    borderRadius: radii.xl,
+    ...shadowSoft,
   },
   sendButtonText: {
     fontSize: 16,

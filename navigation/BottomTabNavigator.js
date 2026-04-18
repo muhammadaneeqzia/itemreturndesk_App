@@ -1,4 +1,5 @@
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useTheme } from '../context/ThemeContext';
 import SimpleIcon from '../components/SimpleIcon';
@@ -22,11 +23,19 @@ const BottomTabNavigator = () => {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
-          borderTopWidth: 1,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          paddingTop: 8,
+          paddingBottom: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: isDark ? 0.35 : 0.06,
+          shadowRadius: 8,
+          elevation: 12,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: 'normal',
+          fontSize: 11,
+          fontWeight: '600',
+          letterSpacing: 0.15,
           fontFamily: undefined,
         },
       }}

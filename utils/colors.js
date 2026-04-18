@@ -1,9 +1,11 @@
-// Light Theme - Blueish Color Scheme
+// Light Theme — refined blues with clearer hierarchy
 export const lightTheme = {
   // Primary Colors
-  primary: '#2196F3',        // Bright Blue
-  primaryDark: '#1976D2',    // Darker Blue
-  primaryLight: '#64B5F6',   // Lighter Blue
+  primary: '#2563EB',
+  primaryDark: '#1D4ED8',
+  primaryLight: '#60A5FA',
+  /** LinearGradient stops for hero surfaces */
+  heroGradient: ['#2563EB', '#0891B2'],
   
   // Secondary Colors
   secondary: '#03A9F4',      // Cyan Blue
@@ -11,9 +13,10 @@ export const lightTheme = {
   secondaryLight: '#4FC3F7', // Lighter Cyan
   
   // Background Colors
-  background: '#F5F9FC',     // Very Light Blue-Gray
-  surface: '#FFFFFF',        // White
-  card: '#FFFFFF',           // White
+  background: '#F0F4FA',
+  surface: '#FFFFFF',
+  card: '#FFFFFF',
+  surfaceMuted: '#E8EEF7',
   
   // Text Colors
   text: '#1A1A1A',           // Almost Black
@@ -32,19 +35,20 @@ export const lightTheme = {
   info: '#2196F3',           // Blue
   
   // Border & Divider
-  border: '#E0E0E0',         // Light Gray
-  divider: '#BDBDBD',        // Medium Gray
-  
+  border: '#E2E8F0',
+  divider: '#CBD5E1',
+
   // Shadow
-  shadow: 'rgba(33, 150, 243, 0.1)', // Blue tinted shadow
+  shadow: 'rgba(37, 99, 235, 0.12)',
 };
 
-// Dark Theme - Blueish Color Scheme
+// Dark Theme — deep surfaces, readable accents
 export const darkTheme = {
   // Primary Colors
-  primary: '#42A5F5',        // Bright Blue
-  primaryDark: '#1E88E5',    // Darker Blue
-  primaryLight: '#90CAF9',   // Lighter Blue
+  primary: '#3B82F6',
+  primaryDark: '#2563EB',
+  primaryLight: '#93C5FD',
+  heroGradient: ['#1E40AF', '#0E7490'],
   
   // Secondary Colors
   secondary: '#29B6F6',      // Cyan Blue
@@ -52,9 +56,10 @@ export const darkTheme = {
   secondaryLight: '#4FC3F7', // Lighter Cyan
   
   // Background Colors
-  background: '#121212',     // Very Dark Gray (Material Dark)
-  surface: '#1E1E1E',        // Dark Gray
-  card: '#252525',           // Slightly Lighter Dark Gray
+  background: '#0C1117',
+  surface: '#161B22',
+  card: '#1C222B',
+  surfaceMuted: '#252D38',
   
   // Text Colors
   text: '#FFFFFF',           // White
@@ -73,11 +78,11 @@ export const darkTheme = {
   info: '#42A5F5',           // Blue
   
   // Border & Divider
-  border: '#333333',         // Dark Gray
-  divider: '#424242',        // Medium Dark Gray
-  
+  border: '#2D3748',
+  divider: '#3D4A5C',
+
   // Shadow
-  shadow: 'rgba(0, 0, 0, 0.3)', // Dark shadow
+  shadow: 'rgba(0, 0, 0, 0.45)',
 };
 
 // Export default theme (can be used for quick access)

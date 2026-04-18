@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import AppIcon from '../components/AppIcon';
 
 const { width, height } = Dimensions.get('window');
 
@@ -66,17 +67,18 @@ const PostSuccessScreen = () => {
 
   const handleViewPost = () => {
     if (postId) {
+      // Root stack uses MainTabs (see StackNavigator), not "Main"
       navigation.reset({
-        index: 0,
+        index: 1,
         routes: [
-          { name: 'Main' },
+          { name: 'MainTabs' },
           { name: 'Details', params: { postId } },
         ],
       });
     } else {
       navigation.reset({
         index: 0,
-        routes: [{ name: 'Main' }],
+        routes: [{ name: 'MainTabs' }],
       });
     }
   };
@@ -84,7 +86,7 @@ const PostSuccessScreen = () => {
   const handleGoHome = () => {
     navigation.reset({
       index: 0,
-      routes: [{ name: 'Main' }],
+      routes: [{ name: 'MainTabs' }],
     });
   };
 
@@ -118,16 +120,9 @@ const PostSuccessScreen = () => {
                 },
               ]}
             >
-              <Animated.Text
-                style={[
-                  styles.checkIcon,
-                  {
-                    transform: [{ scale: checkScaleAnim }],
-                  },
-                ]}
-              >
-                ✓
-              </Animated.Text>
+              <Animated.View style={{ transform: [{ scale: checkScaleAnim }] }}>
+                <AppIcon name="checkmark" size={44} color="#FFFFFF" />
+              </Animated.View>
             </Animated.View>
           </Animated.View>
         </View>
@@ -141,7 +136,7 @@ const PostSuccessScreen = () => {
         {/* Success Details */}
         <View style={[styles.detailsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.detailRow}>
-            <Text style={styles.detailIcon}>📢</Text>
+            <AppIcon name="megaphone" size={24} color={colors.primary} style={styles.detailIcon} />
             <View style={styles.detailTextContainer}>
               <Text style={[styles.detailTitle, { color: colors.text }]}>Posted Successfully</Text>
               <Text style={[styles.detailDescription, { color: colors.textSecondary }]}>
@@ -153,7 +148,7 @@ const PostSuccessScreen = () => {
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           <View style={styles.detailRow}>
-            <Text style={styles.detailIcon}>👥</Text>
+            <AppIcon name="people" size={24} color={colors.primary} style={styles.detailIcon} />
             <View style={styles.detailTextContainer}>
               <Text style={[styles.detailTitle, { color: colors.text }]}>Visible to Everyone</Text>
               <Text style={[styles.detailDescription, { color: colors.textSecondary }]}>
@@ -165,7 +160,7 @@ const PostSuccessScreen = () => {
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           <View style={styles.detailRow}>
-            <Text style={styles.detailIcon}>🔔</Text>
+            <AppIcon name="notifications" size={24} color={colors.primary} style={styles.detailIcon} />
             <View style={styles.detailTextContainer}>
               <Text style={[styles.detailTitle, { color: colors.text }]}>Stay Updated</Text>
               <Text style={[styles.detailDescription, { color: colors.textSecondary }]}>
@@ -238,11 +233,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
   },
-  checkIcon: {
-    fontSize: 60,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
@@ -274,9 +264,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   detailIcon: {
-    fontSize: 24,
     marginRight: 16,
     marginTop: 2,
+    width: 28,
   },
   detailTextContainer: {
     flex: 1,

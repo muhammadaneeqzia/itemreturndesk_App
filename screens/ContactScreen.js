@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Image,
   Linking,
-  Alert,
   Dimensions,
   ActivityIndicator,
   RefreshControl,
@@ -16,10 +15,14 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { useToast } from '../context/ToastContext';
+import { useAppModal } from '../context/ModalContext';
 import { postService } from '../lib/services/posts/postService';
 import { chatService } from '../lib/services/chats/chatService';
 import { userService } from '../lib/services/users/userService';
 import MatchingSuggestions from '../components/MatchingSuggestions';
+import AppIcon from '../components/AppIcon';
+import ScreenHeader from '../components/ScreenHeader';
+import { radii, shadowSoft, space } from '../utils/layout';
 
 const { width } = Dimensions.get('window');
 
@@ -27,6 +30,7 @@ const ContactScreen = () => {
   const { colors } = useTheme();
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { showAlert } = useAppModal();
   const navigation = useNavigation();
   const route = useRoute();
   const { post: initialPost, postId } = route.params || {};
@@ -160,7 +164,7 @@ const ContactScreen = () => {
     }
     const phoneNumber = contactInfo.phone.replace(/[^0-9+]/g, '');
     Linking.openURL(`tel:${phoneNumber}`).catch((err) => {
-      Alert.alert('Error', 'Unable to make phone call');
+      showAlert('Error', 'Unable to make phone call');
       console.error(err);
     });
   };
@@ -185,7 +189,7 @@ const ContactScreen = () => {
         }
       })
       .catch((err) => {
-        Alert.alert('Error', 'Unable to open WhatsApp');
+        showAlert('Error', 'Unable to open WhatsApp');
         console.error(err);
       });
   };
@@ -237,13 +241,7 @@ const ContactScreen = () => {
   if (!post || !contactInfo) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Contact</Text>
-          <View style={styles.backButton} />
-        </View>
+        <ScreenHeader title="Contact" onBack={() => navigation.goBack()} />
         <View style={styles.errorContainer}>
           <Text style={[styles.errorText, { color: colors.textSecondary }]}>
             No post information available
@@ -257,14 +255,7 @@ const ContactScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Custom Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Contact</Text>
-        <View style={styles.backButton} />
-      </View>
+      <ScreenHeader title="Contact" onBack={() => navigation.goBack()} />
 
       <ScrollView
         style={styles.scrollView}
@@ -284,7 +275,7 @@ const ContactScreen = () => {
             <Image source={{ uri: post.image }} style={styles.productImage} />
           ) : (
             <View style={[styles.placeholderImage, { backgroundColor: colors.background }]}>
-              <Text style={[styles.placeholderText, { color: colors.textTertiary }]}>📷</Text>
+              <AppIcon name="image" size={48} color={colors.textTertiary} />
             </View>
           )}
         </View>
@@ -338,14 +329,14 @@ const ContactScreen = () => {
           <View style={styles.detailRow}>
             <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Location</Text>
             <View style={styles.locationRow}>
-              <Text style={[styles.locationIcon, { color: colors.textTertiary }]}>📍</Text>
+              <AppIcon name="locationOutline" size={16} color={colors.textTertiary} style={{ marginRight: 6 }} />
               <Text style={[styles.detailValue, { color: colors.text }]}>{post.location}</Text>
             </View>
           </View>
 
           {post.tip && (
             <View style={[styles.tipContainer, { backgroundColor: colors.accent + '20' }]}>
-              <Text style={[styles.tipIcon, { color: colors.accent }]}>💰</Text>
+              <AppIcon name="cash" size={18} color={colors.accent} style={{ marginRight: 8 }} />
               <Text style={[styles.tipText, { color: colors.accent }]}>
                 Reward Offered: {post.tip}
               </Text>
@@ -360,7 +351,7 @@ const ContactScreen = () => {
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
             <View style={styles.contactInfoRow}>
-              <Text style={[styles.contactIcon, { color: colors.primary }]}>👤</Text>
+              <AppIcon name="person" size={22} color={colors.primary} />
               <View style={styles.contactInfo}>
                 <Text style={[styles.contactLabel, { color: colors.textSecondary }]}>Name</Text>
                 <Text style={[styles.contactValue, { color: colors.text }]}>{contactInfo.name}</Text>
@@ -369,7 +360,7 @@ const ContactScreen = () => {
 
             {contactInfo.phone && (
               <View style={styles.contactInfoRow}>
-                <Text style={[styles.contactIcon, { color: colors.primary }]}>📞</Text>
+                <AppIcon name="call" size={22} color={colors.primary} />
                 <View style={styles.contactInfo}>
                   <Text style={[styles.contactLabel, { color: colors.textSecondary }]}>Phone</Text>
                   <Text style={[styles.contactValue, { color: colors.text }]}>{contactInfo.phone}</Text>
@@ -379,7 +370,7 @@ const ContactScreen = () => {
 
             {contactInfo.email && (
               <View style={styles.contactInfoRow}>
-                <Text style={[styles.contactIcon, { color: colors.primary }]}>📧</Text>
+                <AppIcon name="mail" size={22} color={colors.primary} />
                 <View style={styles.contactInfo}>
                   <Text style={[styles.contactLabel, { color: colors.textSecondary }]}>Email</Text>
                   <Text style={[styles.contactValue, { color: colors.text }]}>{contactInfo.email}</Text>
@@ -404,7 +395,7 @@ const ContactScreen = () => {
                   onPress={handleCall}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.actionButtonIcon}>📞</Text>
+                  <AppIcon name="call" size={22} color={colors.textInverse} />
                   <Text style={[styles.actionButtonText, { color: colors.textInverse }]}>Call</Text>
                 </TouchableOpacity>
 
@@ -413,7 +404,7 @@ const ContactScreen = () => {
                   onPress={handleWhatsApp}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.actionButtonIcon}>💬</Text>
+                  <AppIcon name="logoWhatsapp" size={22} color={colors.textInverse} />
                   <Text style={[styles.actionButtonText, { color: colors.textInverse }]}>WhatsApp</Text>
                 </TouchableOpacity>
               </>
@@ -424,7 +415,7 @@ const ContactScreen = () => {
               onPress={handleChat}
               activeOpacity={0.8}
             >
-              <Text style={styles.actionButtonIcon}>💭</Text>
+              <AppIcon name="chatbubbles" size={22} color={colors.textInverse} />
               <Text style={[styles.actionButtonText, { color: colors.textInverse }]}>Chat</Text>
             </TouchableOpacity>
           </View>
@@ -435,7 +426,8 @@ const ContactScreen = () => {
           style={[styles.reportButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
           onPress={() => navigation.navigate('ReportPost', { post })}
         >
-          <Text style={[styles.reportButtonText, { color: colors.error }]}>⚠️ Report Post</Text>
+          <AppIcon name="warning" size={20} color={colors.error} style={{ marginRight: 8 }} />
+          <Text style={[styles.reportButtonText, { color: colors.error }]}>Report post</Text>
         </TouchableOpacity>
 
         <View style={styles.bottomSpacing} />
@@ -448,34 +440,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    paddingTop: 50,
-    borderBottomWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
   scrollView: {
     flex: 1,
   },
@@ -487,7 +451,7 @@ const styles = StyleSheet.create({
     height: 250,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: space.md,
   },
   productImage: {
     width: '100%',
@@ -504,16 +468,12 @@ const styles = StyleSheet.create({
     fontSize: 64,
   },
   detailsCard: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 20,
-    borderRadius: 16,
-    borderWidth: 1,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    marginHorizontal: space.md,
+    marginBottom: space.md,
+    padding: space.md,
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    ...shadowSoft,
   },
   typeBadgeContainer: {
     flexDirection: 'row',
@@ -680,7 +640,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

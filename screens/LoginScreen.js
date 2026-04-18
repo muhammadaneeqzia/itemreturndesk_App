@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import BubblesBackground from '../components/BubblesBackground';
 import PasswordInput from '../components/PasswordInput';
+import { radii, shadowSoft, space } from '../utils/layout';
 
 const { width } = Dimensions.get('window');
 
@@ -108,7 +109,11 @@ const LoginScreen = ({ navigation }) => {
           />
 
           {/* Forgot Password */}
-          <TouchableOpacity style={styles.forgotPassword}>
+          <TouchableOpacity
+            style={styles.forgotPassword}
+            onPress={() => navigation.navigate('ForgotPassword')}
+            hitSlop={8}
+          >
             <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>
               Forgot Password?
             </Text>
@@ -160,24 +165,26 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 30,
-    paddingTop: 60,
-    paddingBottom: 40,
+    paddingHorizontal: space.xl,
+    paddingTop: 56,
+    paddingBottom: space.xl,
     zIndex: 1,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    fontSize: 30,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    marginBottom: space.sm,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    marginBottom: 40,
+    lineHeight: 24,
+    marginBottom: space.xl,
     textAlign: 'center',
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: space.md,
   },
   label: {
     fontSize: 14,
@@ -186,9 +193,9 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 50,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.md,
+    paddingHorizontal: space.md,
     fontSize: 16,
   },
   forgotPassword: {
@@ -201,15 +208,11 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     width: '100%',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: space.md,
+    borderRadius: radii.md,
     alignItems: 'center',
-    marginBottom: 20,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    marginBottom: space.md,
+    ...shadowSoft,
   },
   loginButtonDisabled: {
     opacity: 0.7,

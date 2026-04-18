@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import BubblesBackground from '../components/BubblesBackground';
 import PasswordInput from '../components/PasswordInput';
+import { radii, shadowSoft, space } from '../utils/layout';
 
 const { width } = Dimensions.get('window');
 
@@ -194,24 +195,26 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 30,
-    paddingTop: 60,
-    paddingBottom: 40,
+    paddingHorizontal: space.xl,
+    paddingTop: 48,
+    paddingBottom: space.xl,
     zIndex: 1,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    fontSize: 30,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    marginBottom: space.sm,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    marginBottom: 30,
+    lineHeight: 24,
+    marginBottom: space.lg,
     textAlign: 'center',
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: space.md,
   },
   label: {
     fontSize: 14,
@@ -220,23 +223,19 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 50,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.md,
+    paddingHorizontal: space.md,
     fontSize: 16,
   },
   signupButton: {
     width: '100%',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: space.md,
+    borderRadius: radii.md,
     alignItems: 'center',
-    marginTop: 10,
-    marginBottom: 20,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    marginTop: space.sm,
+    marginBottom: space.md,
+    ...shadowSoft,
   },
   signupButtonDisabled: {
     opacity: 0.7,

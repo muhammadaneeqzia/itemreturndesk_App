@@ -9,6 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import AppIcon from './AppIcon';
 
 const { width } = Dimensions.get('window');
 
@@ -55,8 +56,8 @@ const FilterModal = ({ visible, onClose, onApply, initialFilters = {} }) => {
           {/* Header */}
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Filters</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Text style={[styles.closeButton, { color: colors.primary }]}>✕</Text>
+            <TouchableOpacity onPress={onClose} hitSlop={12}>
+              <AppIcon name="close" size={26} color={colors.primary} />
             </TouchableOpacity>
           </View>
 

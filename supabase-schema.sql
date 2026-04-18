@@ -593,6 +593,26 @@ CREATE POLICY "Users can update own messages"
     ON public.messages FOR UPDATE
     USING (auth.uid() = sender_id);
 
+-- Recipients must be able to mark incoming messages read (is_read) — separate from editing own sent rows
+CREATE POLICY "Participants can mark received messages read"
+    ON public.messages FOR UPDATE
+    USING (
+        sender_id IS DISTINCT FROM auth.uid()
+        AND EXISTS (
+            SELECT 1 FROM public.conversations c
+            WHERE c.id = messages.conversation_id
+              AND (c.user1_id = auth.uid() OR c.user2_id = auth.uid())
+        )
+    )
+    WITH CHECK (
+        sender_id IS DISTINCT FROM auth.uid()
+        AND EXISTS (
+            SELECT 1 FROM public.conversations c
+            WHERE c.id = messages.conversation_id
+              AND (c.user1_id = auth.uid() OR c.user2_id = auth.uid())
+        )
+    );
+
 CREATE POLICY "Users can delete own messages"
     ON public.messages FOR DELETE
     USING (auth.uid() = sender_id);

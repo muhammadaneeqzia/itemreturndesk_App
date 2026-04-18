@@ -14,6 +14,13 @@ import AdminPanelScreen from '../screens/AdminPanelScreen';
 import ReportPostScreen from '../screens/ReportPostScreen';
 import ChatScreen from '../screens/ChatScreen';
 import PostSuccessScreen from '../screens/PostSuccessScreen';
+import PrivacySettingsScreen from '../screens/PrivacySettingsScreen';
+import SecuritySettingsScreen from '../screens/SecuritySettingsScreen';
+import TermsPrivacyScreen from '../screens/TermsPrivacyScreen';
+import HelpCenterScreen from '../screens/HelpCenterScreen';
+import ContactSupportScreen from '../screens/ContactSupportScreen';
+import UserGuideScreen from '../screens/UserGuideScreen';
+import AboutAppScreen from '../screens/AboutAppScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -46,7 +53,7 @@ const StackNavigator = () => {
         name="Details"
         component={DetailsScreen}
         options={{
-          headerTitle: 'Details',
+          headerShown: false,
           presentation: 'card',
         }}
       />
@@ -138,6 +145,41 @@ const StackNavigator = () => {
           presentation: 'card',
           gestureEnabled: false, // Prevent swipe back
         }}
+      />
+      <Stack.Screen
+        name="PrivacySettings"
+        component={PrivacySettingsScreen}
+        options={{ headerShown: false, presentation: 'card' }}
+      />
+      <Stack.Screen
+        name="SecuritySettings"
+        component={SecuritySettingsScreen}
+        options={{ headerShown: false, presentation: 'card' }}
+      />
+      <Stack.Screen
+        name="TermsPrivacy"
+        component={TermsPrivacyScreen}
+        options={{ headerShown: false, presentation: 'card' }}
+      />
+      <Stack.Screen
+        name="HelpCenter"
+        component={HelpCenterScreen}
+        options={{ headerShown: false, presentation: 'card' }}
+      />
+      <Stack.Screen
+        name="ContactSupport"
+        component={ContactSupportScreen}
+        options={{ headerShown: false, presentation: 'card' }}
+      />
+      <Stack.Screen
+        name="UserGuide"
+        component={UserGuideScreen}
+        options={{ headerShown: false, presentation: 'card' }}
+      />
+      <Stack.Screen
+        name="AboutApp"
+        component={AboutAppScreen}
+        options={{ headerShown: false, presentation: 'card' }}
       />
     </Stack.Navigator>
   );

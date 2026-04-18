@@ -17,6 +17,9 @@ import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/nativ
 import { useToast } from '../context/ToastContext';
 import { postService } from '../lib/services/posts/postService';
 import { chatService } from '../lib/services/chats/chatService';
+import AppIcon from '../components/AppIcon';
+import ScreenHeader from '../components/ScreenHeader';
+import { radii, shadowSoft, space } from '../utils/layout';
 
 const { width } = Dimensions.get('window');
 
@@ -121,12 +124,8 @@ const DetailsScreen = () => {
   if (!post) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Details</Text>
-          <View style={styles.backButton} />
+        <View style={styles.headerBlock}>
+          <ScreenHeader title="Details" onBack={() => navigation.goBack()} />
         </View>
         <View style={styles.errorContainer}>
           <Text style={[styles.errorText, { color: colors.textSecondary }]}>Post not found</Text>
@@ -139,13 +138,8 @@ const DetailsScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Custom Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Details</Text>
-        <View style={styles.backButton} />
+      <View style={styles.headerBlock}>
+        <ScreenHeader title="Details" onBack={() => navigation.goBack()} />
       </View>
 
       <ScrollView
@@ -218,14 +212,14 @@ const DetailsScreen = () => {
           <View style={styles.detailRow}>
             <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Location</Text>
             <View style={styles.locationRow}>
-              <Text style={[styles.locationIcon, { color: colors.textTertiary }]}>📍</Text>
+              <AppIcon name="locationOutline" size={16} color={colors.textTertiary} style={{ marginRight: 6 }} />
               <Text style={[styles.detailValue, { color: colors.text }]}>{post.location}</Text>
             </View>
           </View>
 
           {post.tip && (
             <View style={[styles.tipContainer, { backgroundColor: colors.accent + '20' }]}>
-              <Text style={[styles.tipIcon, { color: colors.accent }]}>💰</Text>
+              <AppIcon name="cash" size={18} color={colors.accent} style={{ marginRight: 8 }} />
               <Text style={[styles.tipText, { color: colors.accent }]}>Reward Offered: {post.tip}</Text>
             </View>
           )}
@@ -246,7 +240,7 @@ const DetailsScreen = () => {
               onPress={handleContact}
               activeOpacity={0.8}
             >
-              <Text style={styles.actionButtonIcon}>💬</Text>
+              <AppIcon name="chatbubbles" size={22} color={colors.textInverse} />
               <Text style={[styles.actionButtonText, { color: colors.textInverse }]}>Contact</Text>
             </TouchableOpacity>
           </View>
@@ -262,48 +256,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    paddingTop: 50,
-    borderBottomWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
   loadingContainer: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  headerBlock: {
+    marginBottom: space.lg,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
+    paddingTop: space.md,
     paddingBottom: 20,
   },
   imageCarousel: {
     width: '100%',
     height: 300,
-    marginBottom: 20,
+    marginBottom: space.lg,
   },
   postImage: {
     width: width,
@@ -311,16 +281,13 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   detailsCard: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 20,
-    borderRadius: 16,
+    marginHorizontal: space.md,
+    marginTop: space.lg,
+    marginBottom: space.md,
+    padding: space.md,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    ...shadowSoft,
   },
   typeBadgeContainer: {
     flexDirection: 'row',
@@ -406,15 +373,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   actionButtonsContainer: {
-    marginHorizontal: 20,
-    marginBottom: 20,
+    marginHorizontal: space.md,
+    marginBottom: space.md,
   },
   contactButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 14,
+    paddingVertical: space.md,
+    borderRadius: radii.md,
     gap: 8,
     elevation: 4,
     shadowColor: '#000',

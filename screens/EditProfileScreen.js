@@ -8,18 +8,22 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   Image,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
+import { useAppModal } from '../context/ModalContext';
+import AppIcon from '../components/AppIcon';
+import ScreenHeader from '../components/ScreenHeader';
+import { radii, shadowSoft, space } from '../utils/layout';
 
 const EditProfileScreen = () => {
   const { colors } = useTheme();
   const { user } = useAuth();
   const navigation = useNavigation();
+  const { showAlert, showModal } = useAppModal();
   
   const [fullName, setFullName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -36,7 +40,7 @@ const EditProfileScreen = () => {
         const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
         const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (cameraStatus !== 'granted' || mediaStatus !== 'granted') {
-          Alert.alert(
+          showAlert(
             'Permissions Required',
             'Sorry, we need camera and media library permissions to upload images!'
           );
@@ -59,19 +63,19 @@ const EditProfileScreen = () => {
 
   const handleSave = () => {
     if (!fullName.trim()) {
-      Alert.alert('Error', 'Please enter your full name');
+      showAlert('Error', 'Please enter your full name');
       return;
     }
     
     if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email');
+      showAlert('Error', 'Please enter your email');
       return;
     }
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      showAlert('Error', 'Please enter a valid email address');
       return;
     }
 
@@ -89,31 +93,19 @@ const EditProfileScreen = () => {
 
     console.log('Profile data to save:', profileData);
     
-    Alert.alert('Success', 'Profile updated successfully!', [
-      { text: 'OK', onPress: () => navigation.goBack() },
-    ]);
+    showAlert('Success', 'Profile updated successfully!', () => navigation.goBack());
   };
 
   const handleChangePhoto = () => {
-    Alert.alert(
-      'Select Photo',
-      'Choose an option',
-      [
-        {
-          text: 'Camera',
-          onPress: () => pickImageFromCamera(),
-        },
-        {
-          text: 'Gallery',
-          onPress: () => pickImageFromGallery(),
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+    showModal({
+      title: 'Select Photo',
+      message: 'Choose an option',
+      buttons: [
+        { text: 'Camera', variant: 'primary', onPress: () => pickImageFromCamera() },
+        { text: 'Gallery', variant: 'secondary', onPress: () => pickImageFromGallery() },
+        { text: 'Cancel', variant: 'cancel' },
       ],
-      { cancelable: true }
-    );
+    });
   };
 
   const pickImageFromCamera = async () => {
@@ -129,7 +121,7 @@ const EditProfileScreen = () => {
         setProfileImage(result.assets[0].uri);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to pick image from camera');
+      showAlert('Error', 'Failed to pick image from camera');
       console.error(error);
     }
   };
@@ -147,31 +139,21 @@ const EditProfileScreen = () => {
         setProfileImage(result.assets[0].uri);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to pick image from gallery');
+      showAlert('Error', 'Failed to pick image from gallery');
       console.error(error);
     }
   };
 
   const handleUploadVideo = () => {
-    Alert.alert(
-      'Select Video',
-      'Choose an option',
-      [
-        {
-          text: 'Camera',
-          onPress: () => pickVideoFromCamera(),
-        },
-        {
-          text: 'Gallery',
-          onPress: () => pickVideoFromGallery(),
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+    showModal({
+      title: 'Select Video',
+      message: 'Choose an option',
+      buttons: [
+        { text: 'Camera', variant: 'primary', onPress: () => pickVideoFromCamera() },
+        { text: 'Gallery', variant: 'secondary', onPress: () => pickVideoFromGallery() },
+        { text: 'Cancel', variant: 'cancel' },
       ],
-      { cancelable: true }
-    );
+    });
   };
 
   const pickVideoFromCamera = async () => {
@@ -185,10 +167,10 @@ const EditProfileScreen = () => {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setUploadedVideo(result.assets[0].uri);
-        Alert.alert('Success', 'Video uploaded successfully!');
+        showAlert('Success', 'Video uploaded successfully!');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to pick video from camera');
+      showAlert('Error', 'Failed to pick video from camera');
       console.error(error);
     }
   };
@@ -204,10 +186,10 @@ const EditProfileScreen = () => {
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setUploadedVideo(result.assets[0].uri);
-        Alert.alert('Success', 'Video uploaded successfully!');
+        showAlert('Success', 'Video uploaded successfully!');
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to pick video from gallery');
+      showAlert('Error', 'Failed to pick video from gallery');
       console.error(error);
     }
   };
@@ -217,14 +199,7 @@ const EditProfileScreen = () => {
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* Custom Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Edit Profile</Text>
-        <View style={styles.backButton} />
-      </View>
+      <ScreenHeader title="Edit Profile" onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -368,15 +343,25 @@ const EditProfileScreen = () => {
               style={[styles.videoButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
               onPress={handleUploadVideo}
             >
-              <Text style={[styles.videoButtonText, { color: colors.textSecondary }]}>
-                {uploadedVideo ? '✓ Video Uploaded' : '+ Upload Video'}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                {uploadedVideo ? (
+                  <AppIcon name="checkmarkCircle" size={20} color={colors.success} />
+                ) : (
+                  <AppIcon name="videocam" size={20} color={colors.primary} />
+                )}
+                <Text style={[styles.videoButtonText, { color: colors.textSecondary }]}>
+                  {uploadedVideo ? 'Video uploaded' : 'Upload video'}
+                </Text>
+              </View>
             </TouchableOpacity>
             {uploadedVideo && (
               <View style={[styles.videoInfo, { backgroundColor: colors.primaryLight + '20' }]}>
-                <Text style={[styles.videoInfoText, { color: colors.primary }]}>
-                  📹 Video selected successfully
-                </Text>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+                  <AppIcon name="videocam" size={18} color={colors.primary} style={{ marginRight: 8 }} />
+                  <Text style={[styles.videoInfoText, { color: colors.primary }]}>
+                    Video selected successfully
+                  </Text>
+                </View>
                 <TouchableOpacity
                   onPress={() => setUploadedVideo(null)}
                   style={styles.removeVideoButton}
@@ -408,39 +393,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingTop: 10,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    paddingTop: 50,
-    borderBottomWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    paddingTop: space.sm,
   },
   content: {
-    padding: 20,
-    paddingTop: 20,
+    padding: space.md,
+    paddingTop: space.md,
   },
   avatarSection: {
     alignItems: 'center',
@@ -452,14 +409,10 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
-    borderWidth: 4,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    marginBottom: space.md,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+    ...shadowSoft,
     overflow: 'hidden',
   },
   avatarImage: {
@@ -472,14 +425,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   changePhotoButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    paddingHorizontal: space.lg,
+    paddingVertical: space.sm,
+    borderRadius: radii.xl,
+    ...shadowSoft,
   },
   changePhotoText: {
     fontSize: 14,
@@ -495,9 +444,9 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 50,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.md,
+    paddingHorizontal: space.md,
     fontSize: 16,
   },
   textArea: {

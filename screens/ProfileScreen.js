@@ -1,27 +1,30 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
-  Dimensions,
   Image,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { postService } from '../lib/services/posts/postService';
-
-const { width } = Dimensions.get('window');
+import { useAppModal } from '../context/ModalContext';
+import AppIcon from '../components/AppIcon';
+import { radii, space, shadowSoft } from '../utils/layout';
+import { ChartCard, SegmentedDonutChart } from '../components/charts';
 
 const ProfileScreen = () => {
   const { colors } = useTheme();
   const { user, logout } = useAuth();
   const navigation = useNavigation();
+  const { showConfirm } = useAppModal();
 
   const userName = user?.name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'User';
   const userEmail = user?.email || 'user@example.com';
@@ -37,68 +40,61 @@ const ProfileScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  // Format date to "Month Year" (e.g., "January 2024")
   const formatMemberSince = (date) => {
     if (!date) return 'Recently';
     const d = new Date(date);
-    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
     return `${months[d.getMonth()]} ${d.getFullYear()}`;
   };
 
-  // Fetch stats and recent posts
+  const formatTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    return date.toLocaleDateString();
+  };
+
   const fetchData = async () => {
     if (!user?.id) return;
 
     try {
       setLoading(true);
-      
-      // Fetch stats
-      const statsResult = await postService.getStats(user.id);
-      if (statsResult.success && statsResult.data) {
-        setStats(statsResult.data);
-        
-        // Calculate items returned (claimed posts)
-        const postsResult = await postService.getUserPosts(user.id, { status: 'claimed' });
-        if (postsResult.success && postsResult.data) {
-          setStats(prev => ({
-            ...prev,
-            itemsReturned: postsResult.data.length,
-          }));
-        }
-      }
 
-      // Fetch recent posts (limit to 3)
-      const postsResult = await postService.getUserPosts(user.id, {});
-      if (postsResult.success && postsResult.data) {
-        // Format time ago
-        const formatTimeAgo = (dateString) => {
-          const date = new Date(dateString);
-          const now = new Date();
-          const diffInSeconds = Math.floor((now - date) / 1000);
+      const [postsResult, claimedResult] = await Promise.all([
+        postService.getUserPosts(user.id, {}),
+        postService.getUserPosts(user.id, { status: 'Claimed' }),
+      ]);
 
-          if (diffInSeconds < 60) {
-            return `${diffInSeconds}s ago`;
-          } else if (diffInSeconds < 3600) {
-            return `${Math.floor(diffInSeconds / 60)}m ago`;
-          } else if (diffInSeconds < 86400) {
-            return `${Math.floor(diffInSeconds / 3600)}h ago`;
-          } else if (diffInSeconds < 2592000) {
-            return `${Math.floor(diffInSeconds / 86400)}d ago`;
-          } else {
-            return date.toLocaleDateString();
-          }
-        };
+      const posts = postsResult.success && postsResult.data ? postsResult.data : [];
+      const claimed = claimedResult.success && claimedResult.data ? claimedResult.data : [];
 
-        // Get top 3 posts
-        const recentPosts = postsResult.data.slice(0, 3).map((post) => ({
-          id: post.id,
-          type: post.type,
-          title: post.title,
-          time: formatTimeAgo(post.created_at),
-          status: post.status ? post.status.charAt(0).toUpperCase() + post.status.slice(1) : 'Active',
-        }));
-        setMyPosts(recentPosts);
-      }
+      const lostPosts = posts.filter((p) => p.type === 'Lost').length;
+      const foundPosts = posts.filter((p) => p.type === 'Found').length;
+
+      setStats({
+        totalPosts: posts.length,
+        lostPosts,
+        foundPosts,
+        itemsReturned: claimed.length,
+      });
+
+      const recentPosts = posts.slice(0, 3).map((post) => ({
+        id: post.id,
+        type: post.type,
+        title: post.title,
+        time: formatTimeAgo(post.created_at),
+        status: post.status
+          ? post.status.charAt(0).toUpperCase() + post.status.slice(1)
+          : 'Active',
+      }));
+      setMyPosts(recentPosts);
     } catch (error) {
       console.error('Error fetching profile data:', error);
     } finally {
@@ -106,19 +102,16 @@ const ProfileScreen = () => {
     }
   };
 
-  // Load data on mount
   useEffect(() => {
     fetchData();
   }, [user?.id]);
 
-  // Refresh when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       fetchData();
     }, [user?.id])
   );
 
-  // Refresh function
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchData();
@@ -126,479 +119,535 @@ const ProfileScreen = () => {
   };
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-        },
+    showConfirm({
+      title: 'Logout',
+      message: 'Are you sure you want to logout?',
+      cancelText: 'Cancel',
+      confirmText: 'Logout',
+      destructive: true,
+      onConfirm: async () => {
+        await logout();
       },
-    ]);
+    });
   };
 
-  const handleEditProfile = () => {
-    navigation.navigate('EditProfile');
-  };
+  const gradient = colors.heroGradient || [colors.primary, colors.primaryDark];
 
-  const renderMenuItem = (icon, title, subtitle, onPress, showArrow = true) => (
-    <TouchableOpacity
-      style={[styles.menuItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
-      onPress={onPress}
-      activeOpacity={0.7}
+  const donutSegments = useMemo(
+    () => [
+      { label: 'Lost', value: stats.lostPosts, color: colors.warning },
+      { label: 'Found', value: stats.foundPosts, color: colors.success },
+      { label: 'Claimed', value: stats.itemsReturned, color: colors.info },
+    ],
+    [stats.lostPosts, stats.foundPosts, stats.itemsReturned, colors.warning, colors.success, colors.info]
+  );
+
+  const StatCard = ({ iconName, iconColor, value, label }) => (
+    <View
+      style={[
+        styles.statCard,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+        shadowSoft,
+      ]}
     >
-      <View style={styles.menuItemLeft}>
-        <Text style={styles.menuIcon}>{icon}</Text>
-        <View style={styles.menuItemText}>
-          <Text style={[styles.menuItemTitle, { color: colors.text }]}>{title}</Text>
-          {subtitle && (
-            <Text style={[styles.menuItemSubtitle, { color: colors.textSecondary }]}>
-              {subtitle}
-            </Text>
-          )}
-        </View>
+      <View style={[styles.statIconWrap, { backgroundColor: iconColor + '18' }]}>
+        <AppIcon name={iconName} size={22} color={iconColor} />
       </View>
-      {showArrow && <Text style={[styles.arrow, { color: colors.textTertiary }]}>→</Text>}
+      <Text style={[styles.statNumber, { color: colors.text }]}>{value}</Text>
+      <Text style={[styles.statLabel, { color: colors.textSecondary }]} numberOfLines={2}>
+        {label}
+      </Text>
+    </View>
+  );
+
+  const MenuRow = ({ iconName, iconColor, title, subtitle, onPress }) => (
+    <TouchableOpacity
+      style={[
+        styles.menuRow,
+        { backgroundColor: colors.surface, borderColor: colors.border },
+        shadowSoft,
+      ]}
+      onPress={onPress}
+      activeOpacity={0.72}
+    >
+      <View style={[styles.menuIconWrap, { backgroundColor: (iconColor || colors.primary) + '16' }]}>
+        <AppIcon name={iconName} size={22} color={iconColor || colors.primary} />
+      </View>
+      <View style={styles.menuTextCol}>
+        <Text style={[styles.menuTitle, { color: colors.text }]}>{title}</Text>
+        {subtitle ? (
+          <Text style={[styles.menuSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>
+        ) : null}
+      </View>
+      <AppIcon name="chevronForward" size={20} color={colors.textTertiary} />
     </TouchableOpacity>
   );
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={[styles.contentContainer, { paddingTop: 10 }]}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-      }
-    >
-      {/* Profile Header */}
-      <View style={[styles.profileHeader, { backgroundColor: colors.primary }]}>
-        <View style={styles.headerTop}>
-          <View style={styles.headerSpacer} />
-          <Text style={[styles.headerTitle, { color: colors.textInverse }]}>Profile</Text>
-          <TouchableOpacity
-            style={styles.settingsButton}
-            onPress={() => navigation.navigate('Settings')}
-          >
-            <Text style={[styles.settingsIcon, { color: colors.textInverse }]}>⚙</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={[styles.avatarContainer, { backgroundColor: colors.textInverse + '30' }]}>
-          {userAvatar ? (
-            <Image source={{ uri: userAvatar }} style={styles.avatarImage} />
-          ) : (
-            <Text style={[styles.avatarText, { color: colors.textInverse }]}>
-              {userName.charAt(0).toUpperCase()}
-            </Text>
-          )}
-        </View>
-        <Text style={[styles.profileName, { color: colors.textInverse }]}>{userName}</Text>
-        <Text style={[styles.profileEmail, { color: colors.textInverse }]}>{userEmail}</Text>
-        <TouchableOpacity
-          style={[styles.editButton, { backgroundColor: colors.textInverse + '20', borderColor: colors.textInverse }]}
-          onPress={handleEditProfile}
-        >
-          <Text style={[styles.editButtonText, { color: colors.textInverse }]}>Edit Profile</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Stats Section */}
-      <View style={styles.statsSection}>
-        <View style={[styles.statItem, { borderRightColor: colors.border }]}>
-          <Text style={[styles.statNumber, { color: colors.primary }]}>{stats.totalPosts}</Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Posts</Text>
-        </View>
-        <View style={[styles.statItem, { borderRightColor: colors.border }]}>
-          <Text style={[styles.statNumber, { color: colors.warning }]}>{stats.lostPosts}</Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Lost Items</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: colors.success }]}>{stats.foundPosts}</Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Found Items</Text>
-        </View>
-      </View>
-
-      {/* My Posts Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>My Posts</Text>
-          <TouchableOpacity onPress={() => navigation.navigate('MyPosts')}>
-            <Text style={[styles.seeAllText, { color: colors.primary }]}>See All</Text>
-          </TouchableOpacity>
-        </View>
-        {loading && myPosts.length === 0 ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color={colors.primary} />
-          </View>
-        ) : myPosts.length > 0 ? (
-          myPosts.map((post) => (
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top']}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        }
+      >
+        <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+          <View style={styles.heroTop}>
+            <Text style={styles.heroTitle}>Profile</Text>
             <TouchableOpacity
-              key={post.id}
-              style={[styles.postItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={() => navigation.navigate('Details', { postId: post.id })}
+              style={styles.iconBtn}
+              onPress={() => navigation.navigate('Settings')}
+              hitSlop={12}
+              accessibilityLabel="Settings"
             >
-            <View style={styles.postItemLeft}>
-              <View
+              <AppIcon name="settingsOutline" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={[styles.avatarRing, { borderColor: 'rgba(255,255,255,0.45)' }]}>
+            {userAvatar ? (
+              <Image source={{ uri: userAvatar }} style={styles.avatarImg} />
+            ) : (
+              <Text style={styles.avatarLetter}>{userName.charAt(0).toUpperCase()}</Text>
+            )}
+          </View>
+          <Text style={styles.heroName}>{userName}</Text>
+          <Text style={styles.heroEmail}>{userEmail}</Text>
+
+          <TouchableOpacity
+            style={styles.editPill}
+            onPress={() => navigation.navigate('EditProfile')}
+            activeOpacity={0.85}
+          >
+            <AppIcon name="createOutline" size={18} color="#FFFFFF" />
+            <Text style={styles.editPillText}>Edit profile</Text>
+          </TouchableOpacity>
+        </LinearGradient>
+
+        <View style={styles.statsRow}>
+          <StatCard
+            iconName="layers"
+            iconColor={colors.primary}
+            value={stats.totalPosts}
+            label="My posts"
+          />
+          <StatCard
+            iconName="search"
+            iconColor={colors.warning}
+            value={stats.lostPosts}
+            label="Lost"
+          />
+          <StatCard
+            iconName="cube"
+            iconColor={colors.success}
+            value={stats.foundPosts}
+            label="Found"
+          />
+        </View>
+
+        <View style={styles.chartSection}>
+          <ChartCard
+            title="Post mix"
+            subtitle="Lost vs found vs claimed on your account"
+            colors={colors}
+            style={styles.chartCardNoMargin}
+          >
+            <SegmentedDonutChart segments={donutSegments} colors={colors} />
+          </ChartCard>
+        </View>
+
+        {stats.itemsReturned > 0 ? (
+          <View style={[styles.returnedBanner, { backgroundColor: colors.success + '18' }]}>
+            <AppIcon name="ribbon" size={20} color={colors.success} />
+            <Text style={[styles.returnedText, { color: colors.text }]}>
+              {stats.itemsReturned} returned / claimed
+            </Text>
+          </View>
+        ) : null}
+
+        <View style={styles.section}>
+          <View style={styles.sectionHead}>
+            <Text style={[styles.sectionTitleInline, { color: colors.text }]}>Recent activity</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('MyPosts')} hitSlop={8}>
+              <Text style={[styles.seeAll, { color: colors.primary }]}>See all</Text>
+            </TouchableOpacity>
+          </View>
+          {loading && myPosts.length === 0 ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          ) : myPosts.length > 0 ? (
+            myPosts.map((post) => (
+              <TouchableOpacity
+                key={post.id}
                 style={[
-                  styles.postTypeBadge,
-                  {
-                    backgroundColor:
-                      post.type === 'Lost' ? colors.warning + '20' : colors.success + '20',
-                  },
+                  styles.postCard,
+                  { backgroundColor: colors.surface, borderColor: colors.border },
+                  shadowSoft,
                 ]}
+                onPress={() => navigation.navigate('Details', { postId: post.id })}
+                activeOpacity={0.75}
               >
-                <Text
+                <View
                   style={[
-                    styles.postTypeText,
+                    styles.typePill,
                     {
-                      color: post.type === 'Lost' ? colors.warning : colors.success,
+                      backgroundColor:
+                        post.type === 'Lost' ? colors.warning + '22' : colors.success + '22',
                     },
                   ]}
                 >
-                  {post.type}
-                </Text>
+                  <Text
+                    style={[
+                      styles.typePillText,
+                      { color: post.type === 'Lost' ? colors.warning : colors.success },
+                    ]}
+                  >
+                    {post.type}
+                  </Text>
+                </View>
+                <View style={styles.postMid}>
+                  <Text style={[styles.postTitle, { color: colors.text }]} numberOfLines={1}>
+                    {post.title}
+                  </Text>
+                  <Text style={[styles.postMeta, { color: colors.textTertiary }]}>
+                    {post.time} · {post.status}
+                  </Text>
+                </View>
+                <AppIcon name="chevronForward" size={20} color={colors.textTertiary} />
+              </TouchableOpacity>
+            ))
+          ) : (
+            <View style={[styles.emptyCard, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+              <AppIcon name="documentTextOutline" size={40} color={colors.textTertiary} />
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>No posts yet</Text>
+              <Text style={[styles.emptySub, { color: colors.textSecondary }]}>
+                Create a lost or found post from the home tab.
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Shortcuts</Text>
+          <MenuRow
+            iconName="personOutline"
+            iconColor={colors.primary}
+            title="Edit profile"
+            subtitle="Name, photo, and contact"
+            onPress={() => navigation.navigate('EditProfile')}
+          />
+          <MenuRow
+            iconName="statsChart"
+            iconColor={colors.secondary}
+            title="My posts"
+            subtitle="Manage your listings"
+            onPress={() => navigation.navigate('MyPosts')}
+          />
+          <MenuRow
+            iconName="settingsOutline"
+            iconColor={colors.textTertiary}
+            title="Settings"
+            subtitle="Theme, account, and more"
+            onPress={() => navigation.navigate('Settings')}
+          />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Account</Text>
+          <View
+            style={[
+              styles.infoCard,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+              shadowSoft,
+            ]}
+          >
+            <View style={styles.infoRow}>
+              <AppIcon name="mailOutline" size={18} color={colors.textTertiary} />
+              <View style={styles.infoRowText}>
+                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Email</Text>
+                <Text style={[styles.infoValue, { color: colors.text }]}>{userEmail}</Text>
               </View>
-              <View style={styles.postItemInfo}>
-                <Text style={[styles.postItemTitle, { color: colors.text }]}>{post.title}</Text>
-                <Text style={[styles.postItemTime, { color: colors.textTertiary }]}>
-                  {post.time} • {post.status}
+            </View>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={styles.infoRow}>
+              <AppIcon name="calendarOutline" size={18} color={colors.textTertiary} />
+              <View style={styles.infoRowText}>
+                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Member since</Text>
+                <Text style={[styles.infoValue, { color: colors.text }]}>
+                  {formatMemberSince(user?.created_at || user?.user_metadata?.created_at)}
                 </Text>
               </View>
             </View>
-              <Text style={[styles.arrow, { color: colors.textTertiary }]}>→</Text>
-            </TouchableOpacity>
-          ))
-        ) : (
-          <View style={styles.emptyPostsContainer}>
-            <Text style={[styles.emptyPostsText, { color: colors.textSecondary }]}>
-              No posts yet. Create your first post!
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Quick Actions Section */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
-        {renderMenuItem('👤', 'Edit Profile', 'Update your personal information', handleEditProfile)}
-        {renderMenuItem('🔒', 'Change Password', 'Update your password', () =>
-          Alert.alert('Info', 'Change password feature coming soon')
-        )}
-        {renderMenuItem('📊', 'View Statistics', 'See detailed activity stats', () =>
-          Alert.alert('Info', 'Statistics feature coming soon')
-        )}
-      </View>
-
-      {/* Account Info Section */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Account Information</Text>
-        <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Email</Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>{userEmail}</Text>
-          </View>
-          <View style={[styles.infoDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Member Since</Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>
-              {formatMemberSince(user?.created_at || user?.user_metadata?.created_at)}
-            </Text>
-          </View>
-          <View style={[styles.infoDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Account Status</Text>
-            <View style={[styles.statusBadge, { backgroundColor: colors.success + '20' }]}>
-              <Text style={[styles.statusText, { color: colors.success }]}>Active</Text>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+            <View style={styles.infoRow}>
+              <AppIcon name="shieldCheckmark" size={18} color={colors.success} />
+              <View style={styles.infoRowText}>
+                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Status</Text>
+                <View style={[styles.activePill, { backgroundColor: colors.success + '22' }]}>
+                  <Text style={[styles.activePillText, { color: colors.success }]}>Active</Text>
+                </View>
+              </View>
             </View>
           </View>
         </View>
-      </View>
 
-      <View style={styles.bottomSpacing} />
-    </ScrollView>
+        <TouchableOpacity
+          style={[styles.logoutBtn, { backgroundColor: colors.error + '14', borderColor: colors.error + '55' }]}
+          onPress={handleLogout}
+          activeOpacity={0.8}
+        >
+          <AppIcon name="logOutOutline" size={22} color={colors.error} />
+          <Text style={[styles.logoutText, { color: colors.error }]}>Log out</Text>
+        </TouchableOpacity>
+
+        <View style={{ height: space.xxl + 20 }} />
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  safe: { flex: 1 },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 32 },
+  hero: {
+    marginHorizontal: space.lg,
+    marginTop: space.sm,
+    borderRadius: radii.xxl,
+    paddingTop: space.lg,
+    paddingBottom: space.xl,
+    paddingHorizontal: space.lg,
+    overflow: 'hidden',
   },
-  contentContainer: {
-    paddingBottom: 100,
-  },
-  profileHeader: {
-    padding: 30,
-    paddingTop: 50,
-    alignItems: 'center',
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
-  headerTop: {
+  heroTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    width: '100%',
-    marginBottom: 20,
+    justifyContent: 'space-between',
+    marginBottom: space.lg,
   },
-  headerSpacer: {
-    width: 40,
+  heroTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  iconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  settingsButton: {
+  avatarRing: {
+    width: 104,
+    height: 104,
+    borderRadius: 52,
+    borderWidth: 3,
+    alignSelf: 'center',
+    marginBottom: space.md,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarImg: { width: '100%', height: '100%' },
+  avatarLetter: {
+    fontSize: 40,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  heroName: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    letterSpacing: -0.5,
+  },
+  heroEmail: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: space.md,
+  },
+  editPill: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: radii.full,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  editPillText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: space.sm,
+    paddingHorizontal: space.lg,
+    marginTop: -space.lg,
+    marginBottom: space.md,
+  },
+  chartSection: {
+    paddingHorizontal: space.lg,
+    marginBottom: space.sm,
+  },
+  chartCardNoMargin: {
+    marginBottom: 0,
+  },
+  statCard: {
+    flex: 1,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    paddingVertical: space.md,
+    paddingHorizontal: space.sm,
+    alignItems: 'center',
+  },
+  statIconWrap: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  settingsIcon: {
-    fontSize: 24,
-  },
-  avatarContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-  },
-  avatarText: {
-    fontSize: 40,
-    fontWeight: 'bold',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 50,
-  },
-  loadingContainer: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  emptyPostsContainer: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  emptyPostsText: {
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  profileName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  profileEmail: {
-    fontSize: 14,
-    opacity: 0.9,
-    marginBottom: 20,
-  },
-  editButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 10,
     borderRadius: 20,
-    borderWidth: 1,
-  },
-  editButtonText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  statsSection: {
-    flexDirection: 'row',
-    marginTop: 20,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 12,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-  },
-  statItem: {
-    flex: 1,
-    padding: 16,
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRightWidth: 1,
+    marginBottom: 6,
   },
   statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 4,
+    fontSize: 20,
+    fontWeight: '800',
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  returnedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: space.lg,
+    marginBottom: space.lg,
+    paddingVertical: 12,
+    paddingHorizontal: space.md,
+    borderRadius: radii.md,
+  },
+  returnedText: {
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
   },
   section: {
-    marginBottom: 24,
-    paddingHorizontal: 20,
+    paddingHorizontal: space.lg,
+    marginBottom: space.xl,
   },
-  sectionHeader: {
+  sectionHead: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: space.md,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 12,
+    fontWeight: '800',
+    letterSpacing: -0.2,
+    marginBottom: space.md,
   },
-  seeAllText: {
-    fontSize: 14,
-    fontWeight: 'bold',
+  sectionTitleInline: {
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: -0.2,
   },
-  postItem: {
+  seeAll: { fontSize: 14, fontWeight: '700' },
+  loadingBox: { padding: 24, alignItems: 'center' },
+  postCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 14,
+    padding: space.md,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    marginBottom: 12,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    marginBottom: space.sm,
+    gap: space.sm,
   },
-  postItemLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  postTypeBadge: {
+  typePill: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingVertical: 5,
+    borderRadius: radii.sm,
   },
-  postTypeText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  postItemInfo: {
-    flex: 1,
-  },
-  postItemTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  postItemTime: {
-    fontSize: 12,
-  },
-  menuItem: {
-    flexDirection: 'row',
+  typePillText: { fontSize: 11, fontWeight: '800' },
+  postMid: { flex: 1, minWidth: 0 },
+  postTitle: { fontSize: 16, fontWeight: '700' },
+  postMeta: { fontSize: 12, marginTop: 2 },
+  emptyCard: {
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 14,
+    padding: space.xl,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    marginBottom: 12,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
-  menuItemLeft: {
+  emptyTitle: { fontSize: 17, fontWeight: '700', marginTop: space.md },
+  emptySub: { fontSize: 14, textAlign: 'center', marginTop: 6 },
+  menuRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    padding: space.md,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    marginBottom: space.sm,
+    gap: space.md,
   },
-  menuIcon: {
-    fontSize: 24,
-    marginRight: 16,
-    width: 30,
-  },
-  menuItemText: {
-    flex: 1,
-  },
-  menuItemTitle: {
-    fontSize: 16,
-    fontWeight: 'normal',
-    marginBottom: 2,
-  },
-  menuItemSubtitle: {
-    fontSize: 12,
-  },
-  arrow: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  infoCard: {
+  menuIconWrap: {
+    width: 44,
+    height: 44,
     borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuTextCol: { flex: 1 },
+  menuTitle: { fontSize: 16, fontWeight: '700' },
+  menuSubtitle: { fontSize: 12, marginTop: 2 },
+  infoCard: {
+    borderRadius: radii.lg,
     borderWidth: 1,
-    padding: 16,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
+    padding: space.md,
   },
   infoRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    gap: space.md,
+    paddingVertical: 10,
   },
-  infoLabel: {
-    fontSize: 14,
-  },
-  infoValue: {
-    fontSize: 14,
-    fontWeight: 'normal',
-  },
-  infoDivider: {
-    height: 1,
-    marginVertical: 4,
-  },
-  statusBadge: {
+  infoRowText: { flex: 1 },
+  infoLabel: { fontSize: 12, fontWeight: '600', marginBottom: 2 },
+  infoValue: { fontSize: 15, fontWeight: '600' },
+  divider: { height: StyleSheet.hairlineWidth },
+  activePill: {
+    alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: radii.full,
+    marginTop: 4,
   },
-  statusText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  logoutButton: {
-    marginHorizontal: 20,
-    marginTop: 10,
-    paddingVertical: 16,
-    borderRadius: 12,
+  activePillText: { fontSize: 12, fontWeight: '800' },
+  logoutBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    justifyContent: 'center',
+    gap: 10,
+    marginHorizontal: space.lg,
+    paddingVertical: 16,
+    borderRadius: radii.lg,
+    borderWidth: 1,
   },
-  logoutButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  versionText: {
-    textAlign: 'center',
-    fontSize: 12,
-    marginTop: 20,
-  },
-  bottomSpacing: {
-    height: 20,
-  },
+  logoutText: { fontSize: 16, fontWeight: '800' },
 });
 
 export default ProfileScreen;

@@ -8,13 +8,16 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   Image,
   Dimensions,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../context/ThemeContext';
+import { useAppModal } from '../context/ModalContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import AppIcon from '../components/AppIcon';
+import ScreenHeader from '../components/ScreenHeader';
+import { radii, shadowSoft, space } from '../utils/layout';
 
 const { width } = Dimensions.get('window');
 
@@ -23,6 +26,7 @@ const postTypes = ['Lost', 'Found'];
 
 const EditPostScreen = () => {
   const { colors } = useTheme();
+  const { showAlert, showModal } = useAppModal();
   const navigation = useNavigation();
   const route = useRoute();
   const { post } = route.params || {};
@@ -43,7 +47,7 @@ const EditPostScreen = () => {
         const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
         const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (cameraStatus !== 'granted' || mediaStatus !== 'granted') {
-          Alert.alert(
+          showAlert(
             'Permissions Required',
             'Sorry, we need camera and media library permissions to upload images and videos!'
           );
@@ -66,25 +70,15 @@ const EditPostScreen = () => {
   }, [post]);
 
   const handlePickImage = () => {
-    Alert.alert(
-      'Select Image',
-      'Choose an option',
-      [
-        {
-          text: 'Camera',
-          onPress: () => pickImageFromCamera(),
-        },
-        {
-          text: 'Gallery',
-          onPress: () => pickImageFromGallery(),
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+    showModal({
+      title: 'Select Image',
+      message: 'Choose an option',
+      buttons: [
+        { text: 'Camera', variant: 'primary', onPress: () => pickImageFromCamera() },
+        { text: 'Gallery', variant: 'secondary', onPress: () => pickImageFromGallery() },
+        { text: 'Cancel', variant: 'cancel' },
       ],
-      { cancelable: true }
-    );
+    });
   };
 
   const pickImageFromCamera = async () => {
@@ -100,7 +94,7 @@ const EditPostScreen = () => {
         setImages([...images, ...result.assets.map((asset) => asset.uri)]);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to pick image from camera');
+      showAlert('Error', 'Failed to pick image from camera');
       console.error(error);
     }
   };
@@ -119,31 +113,21 @@ const EditPostScreen = () => {
         setImages([...images, ...result.assets.map((asset) => asset.uri)]);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to pick image from gallery');
+      showAlert('Error', 'Failed to pick image from gallery');
       console.error(error);
     }
   };
 
   const handlePickVideo = () => {
-    Alert.alert(
-      'Select Video',
-      'Choose an option',
-      [
-        {
-          text: 'Camera',
-          onPress: () => pickVideoFromCamera(),
-        },
-        {
-          text: 'Gallery',
-          onPress: () => pickVideoFromGallery(),
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+    showModal({
+      title: 'Select Video',
+      message: 'Choose an option',
+      buttons: [
+        { text: 'Camera', variant: 'primary', onPress: () => pickVideoFromCamera() },
+        { text: 'Gallery', variant: 'secondary', onPress: () => pickVideoFromGallery() },
+        { text: 'Cancel', variant: 'cancel' },
       ],
-      { cancelable: true }
-    );
+    });
   };
 
   const pickVideoFromCamera = async () => {
@@ -159,7 +143,7 @@ const EditPostScreen = () => {
         setVideos([...videos, ...result.assets.map((asset) => asset.uri)]);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to pick video from camera');
+      showAlert('Error', 'Failed to pick video from camera');
       console.error(error);
     }
   };
@@ -177,7 +161,7 @@ const EditPostScreen = () => {
         setVideos([...videos, ...result.assets.map((asset) => asset.uri)]);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to pick video from gallery');
+      showAlert('Error', 'Failed to pick video from gallery');
       console.error(error);
     }
   };
@@ -192,7 +176,7 @@ const EditPostScreen = () => {
 
   const handleSubmit = () => {
     if (!title || !description || !category || !location) {
-      Alert.alert('Error', 'Please fill all required fields');
+      showAlert('Error', 'Please fill all required fields');
       return;
     }
 
@@ -208,9 +192,7 @@ const EditPostScreen = () => {
       videos,
     };
     console.log('Updated post data:', postData);
-    Alert.alert('Success', 'Post updated successfully!', [
-      { text: 'OK', onPress: () => navigation.goBack() },
-    ]);
+    showAlert('Success', 'Post updated successfully!', () => navigation.goBack());
   };
 
   return (
@@ -218,14 +200,7 @@ const EditPostScreen = () => {
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* Custom Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Edit Post</Text>
-        <View style={styles.backButton} />
-      </View>
+      <ScreenHeader title="Edit Post" onBack={() => navigation.goBack()} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -384,8 +359,9 @@ const EditPostScreen = () => {
               />
               {tip.length > 0 && (
                 <View style={[styles.tipInfoBox, { backgroundColor: colors.primaryLight + '20' }]}>
+                  <AppIcon name="cash" size={18} color={colors.primary} style={{ marginRight: 8 }} />
                   <Text style={[styles.tipInfoText, { color: colors.primary }]}>
-                    💰 Reward: {tip} will be shown to finders
+                    Reward: {tip} will be shown to finders
                   </Text>
                 </View>
               )}
@@ -422,7 +398,7 @@ const EditPostScreen = () => {
                 style={[styles.uploadButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 onPress={handlePickImage}
               >
-                <Text style={[styles.uploadButtonIcon, { color: colors.primary }]}>📷</Text>
+                <AppIcon name="camera" size={28} color={colors.primary} style={{ marginBottom: 8 }} />
                 <Text style={[styles.uploadButtonText, { color: colors.textSecondary }]}>
                   Add Image {images.length > 0 && `(${images.length}/5)`}
                 </Text>
@@ -447,7 +423,7 @@ const EditPostScreen = () => {
               <View style={styles.videoList}>
                 {videos.map((videoUri, index) => (
                   <View key={index} style={[styles.videoItem, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <Text style={[styles.videoIcon, { color: colors.primary }]}>🎥</Text>
+                    <AppIcon name="videocam" size={22} color={colors.primary} style={{ marginRight: 10 }} />
                     <View style={styles.videoInfo}>
                       <Text style={[styles.videoText, { color: colors.text }]} numberOfLines={1}>
                         Video {index + 1}
@@ -473,7 +449,7 @@ const EditPostScreen = () => {
                 style={[styles.uploadButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 onPress={handlePickVideo}
               >
-                <Text style={[styles.uploadButtonIcon, { color: colors.primary }]}>🎥</Text>
+                <AppIcon name="videocam" size={28} color={colors.primary} style={{ marginBottom: 8 }} />
                 <Text style={[styles.uploadButtonText, { color: colors.textSecondary }]}>
                   Add Video {videos.length > 0 && `(${videos.length}/2)`}
                 </Text>
@@ -507,39 +483,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingTop: 10,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    paddingTop: 50,
-    borderBottomWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    paddingTop: space.sm,
   },
   content: {
-    padding: 20,
-    paddingTop: 20,
+    padding: space.md,
+    paddingTop: space.md,
   },
   section: {
     marginBottom: 25,
@@ -560,6 +508,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
     padding: 12,
     borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   tipInfoText: {
     fontSize: 14,
@@ -723,16 +673,12 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   submitButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: space.md,
+    borderRadius: radii.md,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: space.md,
     marginBottom: 40,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    ...shadowSoft,
   },
   submitButtonText: {
     fontSize: 18,

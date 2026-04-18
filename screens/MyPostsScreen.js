@@ -8,7 +8,6 @@ import {
   TextInput,
   Image,
   Dimensions,
-  Alert,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
@@ -16,7 +15,11 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useToast } from '../context/ToastContext';
+import { useAppModal } from '../context/ModalContext';
 import MyPostsFilterModal from '../components/MyPostsFilterModal';
+import AppIcon from '../components/AppIcon';
+import ScreenHeader from '../components/ScreenHeader';
+import { radii, shadowSoft, space } from '../utils/layout';
 import { postService } from '../lib/services/posts/postService';
 
 const { width } = Dimensions.get('window');
@@ -25,6 +28,7 @@ const MyPostsScreen = () => {
   const { colors } = useTheme();
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { showConfirm } = useAppModal();
   const navigation = useNavigation();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -145,32 +149,27 @@ const MyPostsScreen = () => {
   };
 
   const handleDeletePost = (post) => {
-    Alert.alert(
-      'Delete Post',
-      `Are you sure you want to delete "${post.title}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const result = await postService.deletePost(post.id, user.id);
-              if (result.success) {
-                // Remove post from state
-                setPosts(posts.filter((p) => p.id !== post.id));
-                showToast('Post deleted successfully', 'success');
-              } else {
-                showToast(result.error || 'Failed to delete post', 'error');
-              }
-            } catch (error) {
-              console.error('Error deleting post:', error);
-              showToast('An error occurred while deleting post', 'error');
-            }
-          },
-        },
-      ]
-    );
+    showConfirm({
+      title: 'Delete Post',
+      message: `Are you sure you want to delete "${post.title}"? This action cannot be undone.`,
+      cancelText: 'Cancel',
+      confirmText: 'Delete',
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          const result = await postService.deletePost(post.id, user.id);
+          if (result.success) {
+            setPosts(posts.filter((p) => p.id !== post.id));
+            showToast('Post deleted successfully', 'success');
+          } else {
+            showToast(result.error || 'Failed to delete post', 'error');
+          }
+        } catch (error) {
+          console.error('Error deleting post:', error);
+          showToast('An error occurred while deleting post', 'error');
+        }
+      },
+    });
   };
 
   const renderPostCard = ({ item }) => (
@@ -184,7 +183,7 @@ const MyPostsScreen = () => {
           <Image source={{ uri: item.image }} style={styles.postImage} />
         ) : (
           <View style={styles.placeholderImage}>
-            <Text style={[styles.placeholderText, { color: colors.textTertiary }]}>📷</Text>
+            <AppIcon name="image" size={36} color={colors.textTertiary} />
           </View>
         )}
       </View>
@@ -226,7 +225,7 @@ const MyPostsScreen = () => {
             <Text style={[styles.categoryText, { color: colors.primary }]}>{item.category}</Text>
           </View>
           <View style={styles.locationContainer}>
-            <Text style={[styles.locationIcon, { color: colors.textTertiary }]}>📍</Text>
+            <AppIcon name="locationOutline" size={14} color={colors.textTertiary} style={{ marginRight: 4 }} />
             <Text style={[styles.locationText, { color: colors.textSecondary }]}>
               {item.location}
             </Text>
@@ -235,7 +234,10 @@ const MyPostsScreen = () => {
 
         {item.tip && (
           <View style={[styles.tipContainer, { backgroundColor: colors.accent + '20' }]}>
-            <Text style={[styles.tipText, { color: colors.accent }]}>💰 Reward: {item.tip}</Text>
+            <View style={styles.tipRow}>
+              <AppIcon name="cash" size={16} color={colors.accent} style={{ marginRight: 6 }} />
+              <Text style={[styles.tipText, { color: colors.accent }]}>Reward: {item.tip}</Text>
+            </View>
           </View>
         )}
 
@@ -277,15 +279,12 @@ const MyPostsScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Custom Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <View style={styles.backButton} />
-        <Text style={[styles.headerTitle, { color: colors.text }]}>My Posts</Text>
-        <View style={styles.backButton} />
-      </View>
+      <ScreenHeader variant="tab" title="My Posts" />
 
       {/* Search Bar with Filter Icon */}
-      <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
+      <View
+        style={[styles.searchContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}
+      >
         <View style={styles.searchInputContainer}>
           <TextInput
             style={[
@@ -309,14 +308,11 @@ const MyPostsScreen = () => {
             ]}
             onPress={() => setShowFilterModal(true)}
           >
-            <Text
-              style={[
-                styles.filterIcon,
-                { color: hasActiveFilters ? colors.textInverse : colors.textSecondary },
-              ]}
-            >
-              ⚙
-            </Text>
+            <AppIcon
+              name="options"
+              size={22}
+              color={hasActiveFilters ? colors.textInverse : colors.textSecondary}
+            />
             {hasActiveFilters && (
               <View style={[styles.filterBadge, { backgroundColor: colors.textInverse }]} />
             )}
@@ -342,7 +338,7 @@ const MyPostsScreen = () => {
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>📝</Text>
+          <AppIcon name="documentTextOutline" size={56} color={colors.textTertiary} style={{ marginBottom: 12 }} />
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
             {searchQuery.trim() || hasActiveFilters ? 'No posts found' : 'No posts yet'}
           </Text>
@@ -369,38 +365,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    paddingTop: 50,
-    borderBottomWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
   searchContainer: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
+    padding: space.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   searchInputContainer: {
     flexDirection: 'row',
@@ -442,15 +409,11 @@ const styles = StyleSheet.create({
   },
   postCard: {
     flexDirection: 'row',
-    marginBottom: 20,
-    borderRadius: 16,
-    borderWidth: 1,
+    marginBottom: space.md,
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    ...shadowSoft,
   },
   imageContainer: {
     width: 120,
@@ -552,6 +515,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     alignSelf: 'flex-start',
   },
+  tipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   tipText: {
     fontSize: 12,
     fontWeight: 'bold',
@@ -602,10 +569,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 60,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
   },
   emptyText: {
     fontSize: 18,

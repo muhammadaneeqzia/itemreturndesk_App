@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import BubblesBackground from '../components/BubblesBackground';
+import AppIcon from '../components/AppIcon';
 
 const { width } = Dimensions.get('window');
 
@@ -21,7 +22,7 @@ const OnboardingScreen = ({ navigation }) => {
       <View style={styles.content}>
         {/* Icon */}
         <View style={[styles.iconContainer, { backgroundColor: colors.primary }]}>
-          <Text style={styles.icon}>📦</Text>
+          <AppIcon name="cube" size={56} color="#FFFFFF" />
         </View>
 
         {/* App Info */}
@@ -92,9 +93,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-  },
-  icon: {
-    fontSize: 60,
   },
   title: {
     fontSize: 32,

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import AppIcon from './AppIcon';
 
 const { width } = Dimensions.get('window');
 
@@ -11,7 +12,6 @@ const Toast = ({ message, type = 'info', visible, onHide, duration = 3000 }) => 
 
   useEffect(() => {
     if (visible) {
-      // Show animation
       Animated.parallel([
         Animated.spring(slideAnim, {
           toValue: 0,
@@ -26,7 +26,6 @@ const Toast = ({ message, type = 'info', visible, onHide, duration = 3000 }) => 
         }),
       ]).start();
 
-      // Auto hide after duration
       const timer = setTimeout(() => {
         hideToast();
       }, duration);
@@ -69,18 +68,20 @@ const Toast = ({ message, type = 'info', visible, onHide, duration = 3000 }) => 
     }
   };
 
-  const getIcon = () => {
+  const toastIcon = () => {
     switch (type) {
       case 'success':
-        return '✓';
+        return { name: 'checkmarkCircle', size: 22 };
       case 'error':
-        return '✕';
+        return { name: 'close', size: 22 };
       case 'warning':
-        return '⚠';
+        return { name: 'warning', size: 22 };
       default:
-        return 'ℹ';
+        return { name: 'informationCircle', size: 22 };
     }
   };
+
+  const icon = toastIcon();
 
   return (
     <Animated.View
@@ -94,7 +95,7 @@ const Toast = ({ message, type = 'info', visible, onHide, duration = 3000 }) => 
       pointerEvents="none"
     >
       <View style={[styles.toast, { backgroundColor: getBackgroundColor() }]}>
-        <Text style={styles.icon}>{getIcon()}</Text>
+        <AppIcon name={icon.name} size={icon.size} color={colors.textInverse} style={styles.icon} />
         <Text style={[styles.message, { color: colors.textInverse }]}>{message}</Text>
       </View>
     </Animated.View>
@@ -125,10 +126,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   icon: {
-    fontSize: 20,
     marginRight: 10,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
   },
   message: {
     flex: 1,
@@ -138,4 +136,3 @@ const styles = StyleSheet.create({
 });
 
 export default Toast;
-

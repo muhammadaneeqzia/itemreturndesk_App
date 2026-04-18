@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,16 @@ import {
   Image,
   ActivityIndicator,
   RefreshControl,
+  DeviceEventEmitter,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { chatService } from '../lib/services/chats/chatService';
-import { messageService } from '../lib/services/messages/messageService';
+import AppIcon from '../components/AppIcon';
+import ScreenHeader from '../components/ScreenHeader';
+import { radii, shadowSoft, space } from '../utils/layout';
+import { CHATS_CONVERSATIONS_REFRESH, CHATS_CONVERSATION_READ } from '../lib/appEvents';
 
 const ChatListScreen = () => {
   const { colors } = useTheme();
@@ -25,16 +29,34 @@ const ChatListScreen = () => {
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  /** Threads user just opened — server refetch can briefly return stale unread; keep badge 0 for a short window. */
+  const recentlyReadRef = useRef(new Map());
+
+  const mergeWithRecentReads = useCallback((list) => {
+    const now = Date.now();
+    const ttlMs = 12000;
+    for (const [id, t] of [...recentlyReadRef.current.entries()]) {
+      if (now - t > ttlMs) recentlyReadRef.current.delete(id);
+    }
+    return (list || []).map((c) => {
+      const id = c.conversationId || c.id;
+      const t = recentlyReadRef.current.get(id);
+      if (t != null && now - t < ttlMs && (c.unreadCount || 0) > 0) {
+        return { ...c, unreadCount: 0 };
+      }
+      return c;
+    });
+  }, []);
 
   // Fetch conversations
-  const fetchConversations = async () => {
+  const fetchConversations = useCallback(async () => {
     if (!user?.id) return;
 
     try {
       setLoading(true);
       const result = await chatService.getUserConversations(user.id);
       if (result.success && result.data) {
-        setConversations(result.data);
+        setConversations(mergeWithRecentReads(result.data));
       } else {
         setConversations([]);
       }
@@ -44,7 +66,7 @@ const ChatListScreen = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id, mergeWithRecentReads]);
 
   // Refresh conversations
   const onRefresh = async () => {
@@ -56,14 +78,39 @@ const ChatListScreen = () => {
   // Load conversations on mount
   useEffect(() => {
     fetchConversations();
-  }, [user?.id]);
+  }, [fetchConversations]);
 
   // Refresh when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       fetchConversations();
-    }, [user?.id])
+    }, [fetchConversations])
   );
+
+  // Refetch when a chat marks messages read (stack push can skip tab focus refetch)
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(CHATS_CONVERSATIONS_REFRESH, () => {
+      fetchConversations();
+    });
+    return () => sub.remove();
+  }, [fetchConversations]);
+
+  // Clear row + tab badge immediately when user opens a thread (DB refetch follows via refresh event)
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(CHATS_CONVERSATION_READ, (payload) => {
+      const conversationId = payload?.conversationId;
+      if (!conversationId) return;
+      recentlyReadRef.current.set(conversationId, Date.now());
+      setConversations((prev) =>
+        prev.map((c) => {
+          const id = c.conversationId || c.id;
+          if (id === conversationId) return { ...c, unreadCount: 0 };
+          return c;
+        })
+      );
+    });
+    return () => sub.remove();
+  }, []);
 
   // Calculate total unread messages
   const totalUnreadMessages = conversations.reduce((total, conv) => total + (conv.unreadCount || 0), 0);
@@ -138,12 +185,7 @@ const ChatListScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Custom Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <View style={styles.headerSpacer} />
-        <Text style={[styles.headerTitle, { color: colors.text }]}>My Chats</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader variant="tab" title="My Chats" />
 
       {/* Conversations List */}
       {loading && conversations.length === 0 ? (
@@ -163,7 +205,7 @@ const ChatListScreen = () => {
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>💬</Text>
+          <AppIcon name="chatbubblesOutline" size={52} color={colors.textTertiary} style={{ marginBottom: 16 }} />
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No messages yet</Text>
           <Text style={[styles.emptySubtext, { color: colors.textTertiary }]}>
             Start a conversation from a post
@@ -178,42 +220,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    paddingTop: 50,
-    borderBottomWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  headerSpacer: {
-    width: 40,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
   listContent: {
-    padding: 16,
-    paddingTop: 26,
+    padding: space.md,
+    paddingTop: space.lg,
   },
   conversationCard: {
     flexDirection: 'row',
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 12,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    padding: space.md,
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: space.sm,
+    ...shadowSoft,
   },
   avatarContainer: {
     width: 60,
@@ -280,10 +297,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
   },
   emptyText: {
     fontSize: 18,

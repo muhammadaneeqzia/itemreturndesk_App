@@ -2,13 +2,16 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useAppModal } from '../context/ModalContext';
+import ScreenHeader from '../components/ScreenHeader';
+import { radii, shadowSoft, space } from '../utils/layout';
 
 const reportReasons = [
   'Spam',
@@ -22,6 +25,7 @@ const reportReasons = [
 const ReportPostScreen = () => {
   const { colors } = useTheme();
   const navigation = useNavigation();
+  const { showAlert } = useAppModal();
   const route = useRoute();
   const { post } = route.params || {};
 
@@ -30,38 +34,25 @@ const ReportPostScreen = () => {
 
   const handleSubmit = () => {
     if (!selectedReason) {
-      Alert.alert('Error', 'Please select a reason for reporting');
+      showAlert('Error', 'Please select a reason for reporting');
       return;
     }
 
     if (selectedReason === 'Other' && !customReason.trim()) {
-      Alert.alert('Error', 'Please provide details for "Other" reason');
+      showAlert('Error', 'Please provide details for "Other" reason');
       return;
     }
 
     // TODO: Implement API call to report post
-    Alert.alert(
-      'Report Submitted',
-      'Thank you for your report. Our team will review it shortly.',
-      [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack(),
-        },
-      ]
+    showAlert('Report Submitted', 'Thank you for your report. Our team will review it shortly.', () =>
+      navigation.goBack()
     );
   };
 
   if (!post) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Report Post</Text>
-          <View style={styles.backButton} />
-        </View>
+        <ScreenHeader title="Report Post" onBack={() => navigation.goBack()} />
         <View style={styles.errorContainer}>
           <Text style={[styles.errorText, { color: colors.textSecondary }]}>
             No post information available
@@ -73,13 +64,7 @@ const ReportPostScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Report Post</Text>
-        <View style={styles.backButton} />
-      </View>
+      <ScreenHeader title="Report Post" onBack={() => navigation.goBack()} />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Post Info */}
@@ -142,11 +127,8 @@ const ReportPostScreen = () => {
                 },
               ]}
             >
-              <Text
-                style={[
-                  styles.textArea,
-                  { color: colors.text },
-                ]}
+              <TextInput
+                style={[styles.textArea, { color: colors.text }]}
                 placeholder="Describe the issue..."
                 placeholderTextColor={colors.textTertiary}
                 value={customReason}
@@ -179,51 +161,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    paddingTop: 50,
-    borderBottomWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    padding: space.md,
     paddingBottom: 100,
   },
   postInfoCard: {
-    padding: 16,
-    borderRadius: 14,
+    padding: space.md,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    marginBottom: 24,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    marginBottom: space.lg,
+    ...shadowSoft,
   },
   postInfoTitle: {
     fontSize: 16,
@@ -255,18 +205,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   reasonButton: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
+    padding: space.md,
+    borderRadius: radii.md,
+    marginBottom: space.sm,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   reasonText: {
     fontSize: 16,
   },
   textAreaContainer: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: space.sm,
     minHeight: 100,
   },
   textArea: {
@@ -275,15 +225,11 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   submitButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: space.md,
+    borderRadius: radii.md,
     alignItems: 'center',
-    marginTop: 20,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    marginTop: space.md,
+    ...shadowSoft,
   },
   submitButtonText: {
     fontSize: 18,

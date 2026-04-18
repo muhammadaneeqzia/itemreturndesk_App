@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  DeviceEventEmitter,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -14,6 +15,10 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useToast } from '../context/ToastContext';
 import { notificationService } from '../lib/services/notifications/notificationService';
 import { chatService } from '../lib/services/chats/chatService';
+import AppIcon from '../components/AppIcon';
+import ScreenHeader from '../components/ScreenHeader';
+import { radii, shadowSoft, space } from '../utils/layout';
+import { NOTIFICATIONS_INBOX_REFRESH } from '../lib/appEvents';
 
 const NotificationsScreen = () => {
   const { colors } = useTheme();
@@ -24,20 +29,20 @@ const NotificationsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const getNotificationIcon = (type) => {
+  const getNotificationIconName = (type) => {
     switch (type) {
       case 'message':
-        return '💬';
+        return 'chatbubbles';
       case 'match':
-        return '🔍';
+        return 'search';
       case 'claim':
-        return '✅';
+        return 'checkmarkCircle';
       case 'contact':
-        return '📞';
+        return 'call';
       case 'admin':
-        return '🛡️';
+        return 'shieldCheckmark';
       default:
-        return '🔔';
+        return 'notifications';
     }
   };
 
@@ -59,24 +64,28 @@ const NotificationsScreen = () => {
   };
 
   // Fetch notifications
-  const fetchNotifications = async () => {
-    if (!user?.id) return;
+  const fetchNotifications = useCallback(
+    async (opts = {}) => {
+      const silent = opts.silent === true;
+      if (!user?.id) return;
 
-    try {
-      setLoading(true);
-      const result = await notificationService.getNotifications(user.id);
-      if (result.success && result.data) {
-        setNotifications(result.data);
-      } else {
+      try {
+        if (!silent) setLoading(true);
+        const result = await notificationService.getNotifications(user.id);
+        if (result.success && result.data) {
+          setNotifications(result.data);
+        } else {
+          setNotifications([]);
+        }
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
         setNotifications([]);
+      } finally {
+        if (!silent) setLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
-      setNotifications([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [user?.id]
+  );
 
   // Refresh notifications
   const onRefresh = async () => {
@@ -88,13 +97,30 @@ const NotificationsScreen = () => {
   // Load notifications on mount
   useEffect(() => {
     fetchNotifications();
-  }, [user?.id]);
+  }, [fetchNotifications]);
+
+  // Realtime / push pipeline may insert new rows while user is elsewhere
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(NOTIFICATIONS_INBOX_REFRESH, () => {
+      fetchNotifications({ silent: true });
+      if (user?.id) {
+        notificationService.getUnreadCount(user.id).then((result) => {
+          if (result.success) {
+            navigation.setOptions({
+              tabBarBadge: result.count > 0 ? result.count : undefined,
+            });
+          }
+        });
+      }
+    });
+    return () => sub.remove();
+  }, [user?.id, navigation, fetchNotifications]);
 
   // Refresh when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       fetchNotifications();
-      
+
       // Update tab badge with unread count
       if (user?.id) {
         notificationService.getUnreadCount(user.id).then((result) => {
@@ -105,7 +131,7 @@ const NotificationsScreen = () => {
           }
         });
       }
-    }, [user?.id, navigation])
+    }, [user?.id, navigation, fetchNotifications])
   );
 
   // Update tab badge when notifications change
@@ -195,7 +221,11 @@ const NotificationsScreen = () => {
       activeOpacity={0.7}
     >
       <View style={[styles.iconContainer, { backgroundColor: getNotificationColor(item.type) + '20' }]}>
-        <Text style={styles.notificationIcon}>{getNotificationIcon(item.type)}</Text>
+        <AppIcon
+          name={getNotificationIconName(item.type)}
+          size={22}
+          color={getNotificationColor(item.type)}
+        />
       </View>
       <View style={styles.notificationContent}>
         <View style={styles.notificationHeader}>
@@ -214,15 +244,17 @@ const NotificationsScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Custom Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Notifications</Text>
-        {unreadCount > 0 && (
-          <TouchableOpacity onPress={markAllAsRead} style={styles.markAllButton}>
-            <Text style={[styles.markAllText, { color: colors.primary }]}>Mark all read</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      <ScreenHeader
+        variant="tab"
+        title="Notifications"
+        rightElement={
+          unreadCount > 0 ? (
+            <TouchableOpacity onPress={markAllAsRead} hitSlop={12}>
+              <Text style={[styles.markAllText, { color: colors.primary }]}>Mark all read</Text>
+            </TouchableOpacity>
+          ) : null
+        }
+      />
 
       {/* Notifications List */}
       {loading && notifications.length === 0 ? (
@@ -242,7 +274,7 @@ const NotificationsScreen = () => {
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🔔</Text>
+          <AppIcon name="notificationsOutline" size={48} color={colors.textTertiary} style={{ marginBottom: 16 }} />
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No notifications</Text>
           <Text style={[styles.emptySubtext, { color: colors.textTertiary }]}>
             You're all caught up!
@@ -257,48 +289,21 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    paddingTop: 50,
-    borderBottomWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    flex: 1,
-  },
-  markAllButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
   markAllText: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   listContent: {
-    padding: 16,
-    paddingTop: 26,
+    padding: space.md,
+    paddingTop: space.lg,
   },
   notificationCard: {
     flexDirection: 'row',
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 12,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    padding: space.md,
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: space.sm,
+    ...shadowSoft,
   },
   iconContainer: {
     width: 50,
@@ -307,9 +312,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-  },
-  notificationIcon: {
-    fontSize: 24,
   },
   notificationContent: {
     flex: 1,
@@ -344,10 +346,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
   },
   emptyText: {
     fontSize: 18,

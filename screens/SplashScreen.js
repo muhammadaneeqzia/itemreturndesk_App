@@ -1,13 +1,27 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Animated,
+  Dimensions,
+  Image,
+  Easing,
+} from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
-const SplashScreen = () => {
+const EXIT_SCALE_TO = 2.65;
+const EXIT_DURATION = 480;
+
+/**
+ * @param {object} props
+ * @param {boolean} [props.exiting] — when true, plays zoom-out + fade end animation (from App.js timing)
+ */
+const SplashScreen = ({ exiting = false }) => {
   const { colors } = useTheme();
-  
-  // Create animated values for bubbles
+
   const bubbles = useRef(
     Array.from({ length: 15 }, (_, i) => {
       const initialSize = 20 + Math.random() * 60;
@@ -27,20 +41,26 @@ const SplashScreen = () => {
     })
   ).current;
 
-  // Create animated value for logo/text
   const logoScale = useRef(new Animated.Value(0)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const textOpacity = useRef(new Animated.Value(0)).current;
-  
-  // Loading dots animation
+
+  const iconExitScale = useRef(new Animated.Value(1)).current;
+  const iconExitOpacity = useRef(new Animated.Value(1)).current;
+  const footerExitOpacity = useRef(new Animated.Value(1)).current;
+
   const dot1Scale = useRef(new Animated.Value(1)).current;
   const dot2Scale = useRef(new Animated.Value(1)).current;
   const dot3Scale = useRef(new Animated.Value(1)).current;
 
+  const exitStarted = useRef(false);
+
   useEffect(() => {
-    // Animate bubbles
+    if (!exiting) exitStarted.current = false;
+  }, [exiting]);
+
+  useEffect(() => {
     const bubbleAnimations = bubbles.map((bubble) => {
-      // Vertical movement - bubbles float up (using translateY)
       const moveY = Animated.loop(
         Animated.sequence([
           Animated.timing(bubble.translateY, {
@@ -56,7 +76,6 @@ const SplashScreen = () => {
         ])
       );
 
-      // Horizontal movement - slight drift (using translateX)
       const driftAmount = 50 + Math.random() * 100;
       const moveX = Animated.loop(
         Animated.sequence([
@@ -73,7 +92,6 @@ const SplashScreen = () => {
         ])
       );
 
-      // Pulse animation - bubbles grow and shrink (using scale)
       const pulse = Animated.loop(
         Animated.sequence([
           Animated.timing(bubble.scale, {
@@ -92,35 +110,31 @@ const SplashScreen = () => {
       return Animated.parallel([moveY, moveX, pulse]);
     });
 
-    // Start all bubble animations
     Animated.parallel(bubbleAnimations).start();
 
-    // Animate logo
     Animated.parallel([
       Animated.spring(logoScale, {
         toValue: 1,
-        tension: 10,
-        friction: 3,
+        tension: 12,
+        friction: 4,
         useNativeDriver: true,
       }),
       Animated.timing(logoOpacity, {
         toValue: 1,
-        duration: 800,
+        duration: 700,
         useNativeDriver: true,
       }),
     ]).start();
 
-    // Animate text
     Animated.timing(textOpacity, {
       toValue: 1,
-      duration: 1000,
-      delay: 500,
+      duration: 900,
+      delay: 400,
       useNativeDriver: true,
     }).start();
 
-    // Animate loading dots with staggered pulse
-    const createDotAnimation = (dot, delay) => {
-      return Animated.loop(
+    const createDotAnimation = (dot, delay) =>
+      Animated.loop(
         Animated.sequence([
           Animated.delay(delay),
           Animated.timing(dot, {
@@ -135,12 +149,38 @@ const SplashScreen = () => {
           }),
         ])
       );
-    };
 
     createDotAnimation(dot1Scale, 0).start();
     createDotAnimation(dot2Scale, 200).start();
     createDotAnimation(dot3Scale, 400).start();
   }, []);
+
+  useEffect(() => {
+    if (!exiting || exitStarted.current) return;
+    exitStarted.current = true;
+
+    Animated.parallel([
+      Animated.timing(iconExitScale, {
+        toValue: EXIT_SCALE_TO,
+        duration: EXIT_DURATION,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(iconExitOpacity, {
+        toValue: 0,
+        duration: EXIT_DURATION - 40,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(footerExitOpacity, {
+        toValue: 0,
+        duration: 320,
+        delay: 80,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [exiting, iconExitScale, iconExitOpacity, footerExitOpacity]);
 
   const getBubbleColor = (index) => {
     const colorsArray = [
@@ -156,7 +196,6 @@ const SplashScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Animated Bubbles */}
       {bubbles.map((bubble, index) => {
         const bubbleColor = getBubbleColor(index);
         return (
@@ -183,7 +222,6 @@ const SplashScreen = () => {
         );
       })}
 
-      {/* Logo/App Name */}
       <View style={styles.content}>
         <Animated.View
           style={[
@@ -194,55 +232,67 @@ const SplashScreen = () => {
             },
           ]}
         >
-          <View style={[styles.logoCircle, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.logoText, { color: colors.textInverse }]}>
-              IRD
-            </Text>
-          </View>
+          <Animated.View
+            style={{
+              transform: [{ scale: iconExitScale }],
+              opacity: iconExitOpacity,
+            }}
+          >
+            <View style={[styles.logoTile, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Image
+                source={require('../assets/icon.png')}
+                style={styles.logoImage}
+                resizeMode="cover"
+                accessibilityLabel="Item Return Desk app icon"
+              />
+            </View>
+          </Animated.View>
         </Animated.View>
 
-        <Animated.Text
-          style={[
-            styles.appName,
-            { color: colors.text, opacity: textOpacity },
-          ]}
-        >
-          Item Return Desk
-        </Animated.Text>
+        <Animated.View style={{ opacity: footerExitOpacity }}>
+          <Animated.Text
+            style={[
+              styles.appName,
+              { color: colors.text, opacity: textOpacity },
+            ]}
+          >
+            Item Return Desk
+          </Animated.Text>
 
-        <Animated.View
-          style={[
-            styles.loadingContainer,
-            { opacity: textOpacity },
-          ]}
-        >
           <Animated.View
             style={[
-              styles.loadingDot,
-              {
-                backgroundColor: colors.primary,
-                transform: [{ scale: dot1Scale }],
-              },
+              styles.loadingContainer,
+              { opacity: textOpacity },
             ]}
-          />
-          <Animated.View
-            style={[
-              styles.loadingDot,
-              {
-                backgroundColor: colors.secondary,
-                transform: [{ scale: dot2Scale }],
-              },
-            ]}
-          />
-          <Animated.View
-            style={[
-              styles.loadingDot,
-              {
-                backgroundColor: colors.accent,
-                transform: [{ scale: dot3Scale }],
-              },
-            ]}
-          />
+          >
+            <Animated.View
+              style={[
+                styles.loadingDot,
+                {
+                  backgroundColor: colors.primary,
+                  transform: [{ scale: dot1Scale }],
+                },
+              ]}
+            />
+            <Animated.View
+              style={[
+                styles.loadingDot,
+                {
+                  backgroundColor: colors.secondary,
+                  transform: [{ scale: dot2Scale }],
+                },
+              ]}
+            />
+            <Animated.View
+              style={[
+                styles.loadingDot,
+                {
+                  backgroundColor: colors.accent,
+                  transform: [{ scale: dot3Scale }],
+                },
+              ]}
+            />
+          </Animated.View>
         </Animated.View>
       </View>
     </View>
@@ -266,22 +316,22 @@ const styles = StyleSheet.create({
   logoContainer: {
     marginBottom: 20,
   },
-  logoCircle: {
+  /** App icon fills this tile — same outer size as before so entrance / exit animations match */
+  logoTile: {
     width: 120,
     height: 120,
-    borderRadius: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 8,
+    borderRadius: 28,
+    borderWidth: StyleSheet.hairlineWidth,
+    elevation: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    overflow: 'hidden',
   },
-  logoText: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    letterSpacing: 2,
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   appName: {
     fontSize: 24,
@@ -304,4 +354,3 @@ const styles = StyleSheet.create({
 });
 
 export default SplashScreen;
-

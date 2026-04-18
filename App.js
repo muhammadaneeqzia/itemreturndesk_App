@@ -5,30 +5,42 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
+import { NotificationProvider } from './context/NotificationContext';
+import { ModalProvider } from './context/ModalContext';
 import AppNavigator from './navigation/AppNavigator';
 import AuthNavigator from './navigation/AuthNavigator';
 import SplashScreen from './screens/SplashScreen';
 import { Platform } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 const RootStack = createNativeStackNavigator();
+
+const SPLASH_MIN_MS = 2000;
+const SPLASH_EXIT_MS = 520;
 
 const AppContent = () => {
   const { isDark, isLoading: themeLoading, colors } = useTheme();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
+  const [splashExiting, setSplashExiting] = useState(false);
 
   useEffect(() => {
-    // Show splash screen for minimum 2 seconds and wait for both theme and auth to load
-    if (!themeLoading && !authLoading) {
-      const timer = setTimeout(() => {
-        setShowSplash(false);
-      }, 2000);
-      return () => clearTimeout(timer);
+    if (themeLoading || authLoading) {
+      setSplashExiting(false);
+      return;
     }
+    // After theme + auth ready: wait until exit animation can run, then unmount splash
+    const exitStart = Math.max(0, SPLASH_MIN_MS - SPLASH_EXIT_MS);
+    const exitTimer = setTimeout(() => setSplashExiting(true), exitStart);
+    const hideTimer = setTimeout(() => setShowSplash(false), SPLASH_MIN_MS);
+    return () => {
+      clearTimeout(exitTimer);
+      clearTimeout(hideTimer);
+    };
   }, [themeLoading, authLoading]);
 
   if (themeLoading || authLoading || showSplash) {
-    return <SplashScreen />;
+    return <SplashScreen exiting={splashExiting} />;
   }
 
   return (
@@ -95,12 +107,18 @@ const AppContent = () => {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <ToastProvider>
-          <AppContent />
-        </ToastProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <NotificationProvider>
+              <ModalProvider>
+                <AppContent />
+              </ModalProvider>
+            </NotificationProvider>
+          </ToastProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }

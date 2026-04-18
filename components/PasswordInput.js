@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import AppIcon from './AppIcon';
+import { radii, space } from '../utils/layout';
 
 const PasswordInput = ({
   label,
@@ -39,10 +41,13 @@ const PasswordInput = ({
           style={styles.eyeButton}
           onPress={() => setShowPassword(!showPassword)}
           activeOpacity={0.7}
+          accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
         >
-          <Text style={[styles.eyeIcon, { color: colors.textSecondary }]}>
-            {showPassword ? '🙈' : '👁️'}
-          </Text>
+          <AppIcon
+            name={showPassword ? 'eyeOff' : 'eye'}
+            size={22}
+            color={colors.textSecondary}
+          />
         </TouchableOpacity>
       </View>
     </View>
@@ -51,7 +56,7 @@ const PasswordInput = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 20,
+    marginBottom: space.md,
   },
   label: {
     fontSize: 14,
@@ -63,9 +68,9 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 50,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.md,
+    paddingHorizontal: space.md,
     paddingRight: 50,
     fontSize: 16,
   },
@@ -78,9 +83,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: 50,
     paddingRight: 16,
-  },
-  eyeIcon: {
-    fontSize: 20,
   },
 });
 

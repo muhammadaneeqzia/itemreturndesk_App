@@ -16,6 +16,9 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useToast } from '../context/ToastContext';
 import FilterModal from '../components/FilterModal';
 import { postService } from '../lib/services/posts/postService';
+import AppIcon from '../components/AppIcon';
+import ScreenHeader from '../components/ScreenHeader';
+import { radii, shadowSoft, space } from '../utils/layout';
 
 const { width } = Dimensions.get('window');
 
@@ -108,7 +111,7 @@ const LostPostsScreen = () => {
           <Image source={{ uri: item.image }} style={styles.postImage} />
         ) : (
           <View style={styles.placeholderImage}>
-            <Text style={[styles.placeholderText, { color: colors.textTertiary }]}>📷</Text>
+            <AppIcon name="image" size={36} color={colors.textTertiary} />
           </View>
         )}
       </View>
@@ -132,7 +135,7 @@ const LostPostsScreen = () => {
             <Text style={[styles.categoryText, { color: colors.primary }]}>{item.category}</Text>
           </View>
           <View style={styles.locationContainer}>
-            <Text style={[styles.locationIcon, { color: colors.textTertiary }]}>📍</Text>
+            <AppIcon name="locationOutline" size={14} color={colors.textTertiary} style={{ marginRight: 4 }} />
             <Text style={[styles.locationText, { color: colors.textSecondary }]}>
               {item.location}
             </Text>
@@ -152,7 +155,7 @@ const LostPostsScreen = () => {
             style={[styles.reportButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
             onPress={() => navigation.navigate('ReportPost', { post: item })}
           >
-            <Text style={[styles.reportButtonText, { color: colors.error }]}>⚠️</Text>
+            <AppIcon name="warning" size={22} color={colors.error} />
           </TouchableOpacity>
         </View>
       </View>
@@ -167,17 +170,11 @@ const LostPostsScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Custom Header */}
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Lost Items</Text>
-        <View style={styles.backButton} />
-      </View>
+      <ScreenHeader title="Lost Items" onBack={() => navigation.goBack()} />
 
-      {/* Search Bar with Filter Icon */}
-      <View style={[styles.searchContainer, { backgroundColor: colors.surface }]}>
+      <View
+        style={[styles.searchContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}
+      >
         <View style={styles.searchInputContainer}>
           <TextInput
             style={[
@@ -201,14 +198,11 @@ const LostPostsScreen = () => {
             ]}
             onPress={() => setShowFilterModal(true)}
           >
-            <Text
-              style={[
-                styles.filterIcon,
-                { color: hasActiveFilters ? colors.textInverse : colors.textSecondary },
-              ]}
-            >
-              ⚙
-            </Text>
+            <AppIcon
+              name="options"
+              size={22}
+              color={hasActiveFilters ? colors.textInverse : colors.textSecondary}
+            />
             {hasActiveFilters && (
               <View style={[styles.filterBadge, { backgroundColor: colors.textInverse }]} />
             )}
@@ -234,7 +228,7 @@ const LostPostsScreen = () => {
         />
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🔍</Text>
+          <AppIcon name="search" size={56} color={colors.textTertiary} style={{ marginBottom: 12 }} />
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
             No lost items found
           </Text>
@@ -259,41 +253,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
   searchContainer: {
-    padding: 15,
-    paddingTop: 10,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    padding: space.md,
+    paddingTop: space.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   searchInputContainer: {
     flexDirection: 'row',
@@ -334,15 +297,11 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   postCard: {
-    marginBottom: 20,
-    borderRadius: 16,
+    marginBottom: space.md,
+    borderRadius: radii.lg,
     overflow: 'hidden',
-    borderWidth: 1,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    borderWidth: StyleSheet.hairlineWidth,
+    ...shadowSoft,
   },
   imageContainer: {
     width: '100%',
@@ -463,10 +422,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
-  },
-  emptyIcon: {
-    fontSize: 60,
-    marginBottom: 20,
   },
   emptyText: {
     fontSize: 20,

@@ -5,12 +5,19 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   FlatList,
+  Dimensions,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
+import { useAppModal } from '../context/ModalContext';
+import AppIcon from '../components/AppIcon';
+import ScreenHeader from '../components/ScreenHeader';
+import { radii, shadowSoft, space } from '../utils/layout';
+import { ChartCard, SparklineChart, AnimatedBarChart } from '../components/charts';
+
+const screenW = Dimensions.get('window').width;
 
 // Mock data for admin panel
 const mockPendingPosts = [
@@ -60,6 +67,7 @@ const AdminPanelScreen = () => {
   const { colors } = useTheme();
   const { isAdmin } = useAuth();
   const navigation = useNavigation();
+  const { showConfirm, showAlert } = useAppModal();
   const [activeTab, setActiveTab] = useState('overview');
   const [pendingPosts, setPendingPosts] = useState(mockPendingPosts);
   const [reportedPosts, setReportedPosts] = useState(mockReportedPosts);
@@ -75,44 +83,44 @@ const AdminPanelScreen = () => {
   };
 
   const handleApprovePost = (postId) => {
-    Alert.alert('Approve Post', 'This post will be approved and made visible to all users.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Approve',
-        onPress: () => {
-          setPendingPosts(pendingPosts.filter((p) => p.id !== postId));
-          Alert.alert('Success', 'Post approved successfully');
-        },
+    showConfirm({
+      title: 'Approve Post',
+      message: 'This post will be approved and made visible to all users.',
+      cancelText: 'Cancel',
+      confirmText: 'Approve',
+      onConfirm: () => {
+        setPendingPosts(pendingPosts.filter((p) => p.id !== postId));
+        setTimeout(() => showAlert('Success', 'Post approved successfully'), 320);
       },
-    ]);
+    });
   };
 
   const handleRejectPost = (postId) => {
-    Alert.alert('Reject Post', 'This post will be removed. Are you sure?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Reject',
-        style: 'destructive',
-        onPress: () => {
-          setPendingPosts(pendingPosts.filter((p) => p.id !== postId));
-          Alert.alert('Success', 'Post rejected and removed');
-        },
+    showConfirm({
+      title: 'Reject Post',
+      message: 'This post will be removed. Are you sure?',
+      cancelText: 'Cancel',
+      confirmText: 'Reject',
+      destructive: true,
+      onConfirm: () => {
+        setPendingPosts(pendingPosts.filter((p) => p.id !== postId));
+        setTimeout(() => showAlert('Success', 'Post rejected and removed'), 320);
       },
-    ]);
+    });
   };
 
   const handleRemoveSpam = (postId) => {
-    Alert.alert('Remove Spam', 'This post will be permanently deleted.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Remove',
-        style: 'destructive',
-        onPress: () => {
-          setReportedPosts(reportedPosts.filter((p) => p.id !== postId));
-          Alert.alert('Success', 'Spam post removed');
-        },
+    showConfirm({
+      title: 'Remove Spam',
+      message: 'This post will be permanently deleted.',
+      cancelText: 'Cancel',
+      confirmText: 'Remove',
+      destructive: true,
+      onConfirm: () => {
+        setReportedPosts(reportedPosts.filter((p) => p.id !== postId));
+        setTimeout(() => showAlert('Success', 'Spam post removed'), 320);
       },
-    ]);
+    });
   };
 
   const renderPostItem = ({ item, isReported = false }) => (
@@ -140,8 +148,9 @@ const AdminPanelScreen = () => {
         </View>
         {isReported && (
           <View style={[styles.reportedBadge, { backgroundColor: colors.error + '20' }]}>
+            <AppIcon name="warning" size={16} color={colors.error} style={{ marginRight: 6 }} />
             <Text style={[styles.reportedText, { color: colors.error }]}>
-              ⚠ {item.reportedCount} Reports
+              {item.reportedCount} reports
             </Text>
           </View>
         )}
@@ -152,7 +161,10 @@ const AdminPanelScreen = () => {
       </Text>
       <View style={styles.postMeta}>
         <Text style={[styles.metaText, { color: colors.textTertiary }]}>{item.category}</Text>
-        <Text style={[styles.metaText, { color: colors.textTertiary }]}>📍 {item.location}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <AppIcon name="locationOutline" size={14} color={colors.textTertiary} />
+          <Text style={[styles.metaText, { color: colors.textTertiary }]}>{item.location}</Text>
+        </View>
       </View>
       {isReported && item.reports && (
         <View style={styles.reportsContainer}>
@@ -195,17 +207,10 @@ const AdminPanelScreen = () => {
   if (!isAdmin) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Admin Panel</Text>
-          <View style={styles.backButton} />
-        </View>
+        <ScreenHeader title="Admin Panel" onBack={() => navigation.goBack()} />
         <View style={styles.errorContainer}>
-          <Text style={[styles.errorText, { color: colors.error }]}>
-            ⚠️ Access Denied
-          </Text>
+          <AppIcon name="warning" size={48} color={colors.error} style={{ marginBottom: 12 }} />
+          <Text style={[styles.errorText, { color: colors.error }]}>Access denied</Text>
           <Text style={[styles.errorSubtext, { color: colors.textSecondary }]}>
             You don't have permission to access this page.
           </Text>
@@ -216,13 +221,7 @@ const AdminPanelScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={[styles.backButtonText, { color: colors.text }]}>←</Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Admin Panel</Text>
-        <View style={styles.backButton} />
-      </View>
+      <ScreenHeader title="Admin Panel" onBack={() => navigation.goBack()} />
 
       {/* Tabs */}
       <View style={[styles.tabsContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
@@ -299,6 +298,31 @@ const AdminPanelScreen = () => {
               </View>
             </View>
 
+            <ChartCard
+              title="Moderation pulse"
+              subtitle="Sample 7-day trend (demo data)"
+              colors={colors}
+            >
+              <SparklineChart
+                values={[3, 5, 4, 8, 12, analytics.resolvedToday, analytics.resolvedToday + 2]}
+                colors={colors}
+                width={screenW - space.md * 4}
+                height={100}
+              />
+            </ChartCard>
+
+            <ChartCard title="Queue vs volume" subtitle="Key counts compared" colors={colors}>
+              <AnimatedBarChart
+                data={[
+                  { label: 'Active', value: analytics.activePosts, color: colors.success },
+                  { label: 'Pending', value: analytics.pendingReview, color: colors.warning },
+                  { label: 'Reports', value: analytics.reportedPosts, color: colors.error },
+                ]}
+                colors={colors}
+                height={152}
+              />
+            </ChartCard>
+
             {/* Quick Stats */}
             <View style={[styles.quickStatsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.cardTitle, { color: colors.text }]}>Today's Activity</Text>
@@ -360,34 +384,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    paddingTop: 50,
-    borderBottomWidth: 1,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
   tabsContainer: {
     flexDirection: 'row',
     borderBottomWidth: 1,
@@ -405,26 +401,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    padding: space.md,
     paddingBottom: 100,
   },
   analyticsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 20,
+    gap: space.sm,
+    marginBottom: space.md,
   },
   statCard: {
     width: '48%',
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1,
+    padding: space.md,
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    ...shadowSoft,
   },
   statNumber: {
     fontSize: 28,
@@ -435,14 +427,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   quickStatsCard: {
-    padding: 20,
-    borderRadius: 14,
-    borderWidth: 1,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    padding: space.md,
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    ...shadowSoft,
   },
   cardTitle: {
     fontSize: 18,
@@ -462,15 +450,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   postCard: {
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 16,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    padding: space.md,
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: space.md,
+    ...shadowSoft,
   },
   postHeader: {
     flexDirection: 'row',
@@ -488,6 +472,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   reportedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
