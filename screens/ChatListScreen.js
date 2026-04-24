@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   DeviceEventEmitter,
+  Alert,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -18,10 +19,12 @@ import AppIcon from '../components/AppIcon';
 import ScreenHeader from '../components/ScreenHeader';
 import { radii, shadowSoft, space } from '../utils/layout';
 import { CHATS_CONVERSATIONS_REFRESH, CHATS_CONVERSATION_READ } from '../lib/appEvents';
+import { useToast } from '../context/ToastContext';
 
 const ChatListScreen = () => {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const navigation = useNavigation();
   
   // Get parent navigator (StackNavigator) to navigate to Chat screen
@@ -145,10 +148,48 @@ const ChatListScreen = () => {
     }
   };
 
+  const confirmDeleteConversation = useCallback(
+    async (item) => {
+      const id = item.conversationId || item.id;
+      if (!id) return;
+      const result = await chatService.deleteConversation(id);
+      if (result.success) {
+        recentlyReadRef.current.delete(id);
+        setConversations((prev) => prev.filter((c) => (c.conversationId || c.id) !== id));
+        showToast('Chat removed', 'success');
+      } else {
+        showToast(result.error || 'Could not delete chat', 'error');
+      }
+    },
+    [showToast]
+  );
+
+  const handleConversationLongPress = useCallback(
+    (item) => {
+      Alert.alert(
+        'Delete chat?',
+        `This removes the entire thread with ${item.userName || 'this user'} for both of you. All messages are deleted and cannot be restored.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () => {
+              void confirmDeleteConversation(item);
+            },
+          },
+        ]
+      );
+    },
+    [confirmDeleteConversation]
+  );
+
   const renderConversationItem = ({ item }) => (
     <TouchableOpacity
       style={[styles.conversationCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
       onPress={() => handleConversationPress(item)}
+      onLongPress={() => handleConversationLongPress(item)}
+      delayLongPress={400}
       activeOpacity={0.7}
     >
       <View style={[styles.avatarContainer, { backgroundColor: colors.primary }]}>

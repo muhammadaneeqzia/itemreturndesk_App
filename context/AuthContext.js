@@ -208,16 +208,43 @@ export const AuthProvider = ({ children }) => {
   const signup = async (email, password, name) => {
     try {
       const result = await authService.signUp(email, password, name);
-      if (result.success) {
-        const signInResult = await authService.signIn(email, password);
-        if (signInResult.success) {
-          await setRecoveryActive(false);
-          setUser(signInResult.user);
-          setIsAuthenticated(true);
-        }
-        return signInResult;
+      if (!result.success) {
+        return result;
       }
-      return result;
+
+      // Do not call signIn here: with "confirm email" enabled, signUp returns no session and
+      // signIn fails with "Email not confirmed" — and it doubles auth calls (rate limits).
+      if (result.needsEmailConfirmation) {
+        return {
+          success: true,
+          needsEmailConfirmation: true,
+          message:
+            'We sent a confirmation link to your email. Open it, then log in here.',
+        };
+      }
+
+      let userResult = await authService.getCurrentUser();
+      if (!userResult.success || !userResult.user) {
+        for (let i = 0; i < 2; i++) {
+          await new Promise((r) => setTimeout(r, 500));
+          userResult = await authService.getCurrentUser();
+          if (userResult.success && userResult.user) break;
+        }
+      }
+
+      if (userResult.success && userResult.user) {
+        await setRecoveryActive(false);
+        setUser(userResult.user);
+        setIsAuthenticated(true);
+        return { success: true };
+      }
+
+      return {
+        success: true,
+        needsEmailConfirmation: true,
+        message:
+          'Account was created. If the app did not open your home screen, check your email to confirm, then log in.',
+      };
     } catch (error) {
       console.error('Signup error:', error);
       return { success: false, error: error.message || 'Signup failed' };

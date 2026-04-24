@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -29,8 +29,18 @@ const SignupScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const submittingRef = useRef(false);
+  const cooldownUntilRef = useRef(0);
 
   const handleSignup = async () => {
+    if (submittingRef.current) return;
+    const now = Date.now();
+    if (now < cooldownUntilRef.current) {
+      const sec = Math.ceil((cooldownUntilRef.current - now) / 1000);
+      showToast(`Please wait ${sec}s before trying again.`, 'error');
+      return;
+    }
+
     // Validation
     if (!name.trim()) {
       showToast('Please enter your name', 'error');
@@ -60,19 +70,37 @@ const SignupScreen = ({ navigation }) => {
       return;
     }
 
+    submittingRef.current = true;
     setLoading(true);
+    let signupResult;
     try {
-      const result = await signup(email, password, name);
-      if (result.success) {
-        showToast('Account created successfully!', 'success');
-        // Navigation will happen automatically via AuthContext state change
+      signupResult = await signup(email, password, name);
+      if (signupResult.success) {
+        if (signupResult.needsEmailConfirmation) {
+          showToast(
+            signupResult.message ||
+              'Check your email and tap the confirmation link, then log in.',
+            'success'
+          );
+          navigation.navigate('Login');
+          cooldownUntilRef.current = Date.now() + 15000;
+        } else {
+          showToast('Account created successfully!', 'success');
+        }
       } else {
-        showToast(result.error || 'Signup failed. Please try again.', 'error');
+        showToast(signupResult.error || 'Signup failed. Please try again.', 'error');
+        if (signupResult.rateLimited) {
+          cooldownUntilRef.current = Date.now() + 120000;
+        } else {
+          cooldownUntilRef.current = Date.now() + 8000;
+        }
       }
     } catch (error) {
       showToast('An error occurred. Please try again.', 'error');
+      cooldownUntilRef.current = Date.now() + 8000;
     } finally {
       setLoading(false);
+      submittingRef.current = false;
     }
   };
 
