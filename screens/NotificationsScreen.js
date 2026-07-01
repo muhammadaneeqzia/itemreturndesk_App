@@ -17,7 +17,7 @@ import { notificationService } from '../lib/services/notifications/notificationS
 import { chatService } from '../lib/services/chats/chatService';
 import AppIcon from '../components/AppIcon';
 import ScreenHeader from '../components/ScreenHeader';
-import { radii, shadowSoft, space } from '../utils/layout';
+import { radii, shadowSoft, space } from '../utils';
 import { NOTIFICATIONS_INBOX_REFRESH } from '../lib/appEvents';
 
 const NotificationsScreen = () => {

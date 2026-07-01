@@ -22,7 +22,7 @@ import { postService } from '../lib/services/posts/postService';
 import { storageService } from '../lib/services/storage/storageService';
 import AppIcon from '../components/AppIcon';
 import ScreenHeader from '../components/ScreenHeader';
-import { radii, shadowSoft, space } from '../utils/layout';
+import { radii, shadowSoft, space } from '../utils';
 
 const { width } = Dimensions.get('window');
 
@@ -44,6 +44,7 @@ const CreatePostScreen = () => {
   const [images, setImages] = useState([]);
   const [videos, setVideos] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
 
   useEffect(() => {
     // Request permissions on mount
@@ -79,7 +80,7 @@ const CreatePostScreen = () => {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 0.8,
+        quality: 0.55,
         allowsMultipleSelection: false,
       });
 
@@ -98,7 +99,7 @@ const CreatePostScreen = () => {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 0.8,
+        quality: 0.55,
         allowsMultipleSelection: true,
       });
 
@@ -128,7 +129,7 @@ const CreatePostScreen = () => {
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Videos,
         allowsEditing: true,
-        quality: 0.8,
+        quality: 0.55,
         videoMaxDuration: 60, // 60 seconds max
       });
 
@@ -146,7 +147,7 @@ const CreatePostScreen = () => {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Videos,
         allowsEditing: true,
-        quality: 0.8,
+        quality: 0.55,
         videoMaxDuration: 60, // 60 seconds max
       });
 
@@ -180,8 +181,8 @@ const CreatePostScreen = () => {
 
     try {
       setSubmitting(true);
+      setUploadProgress('Preparing...');
 
-      // Extract numeric value from tip (e.g., "$20" -> "20", "₹500" -> "500")
       let tipAmount = null;
       if (tip && postType === 'Lost') {
         const numericValue = tip.replace(/[^0-9.]/g, '');
@@ -190,33 +191,43 @@ const CreatePostScreen = () => {
         }
       }
 
-      // Upload images first
-      let imageUrls = [];
-      if (images.length > 0) {
-        showToast('Uploading images...', 'info');
-        const imageResult = await storageService.uploadMultipleImages(images);
-        if (!imageResult.success) {
-          showToast(imageResult.error || 'Failed to upload images', 'error');
-          setSubmitting(false);
-          return;
-        }
-        imageUrls = imageResult.urls || [];
+      const hasImages = images.length > 0;
+      const hasVideos = videos.length > 0;
+
+      if (hasImages || hasVideos) {
+        setUploadProgress(
+          hasImages && hasVideos
+            ? 'Uploading photos & videos...'
+            : hasImages
+              ? 'Uploading photos...'
+              : 'Uploading video...'
+        );
       }
 
-      // Upload videos
-      let videoUrls = [];
-      if (videos.length > 0) {
-        showToast('Uploading videos...', 'info');
-        const videoResult = await storageService.uploadMultipleVideos(videos);
-        if (!videoResult.success) {
-          showToast(videoResult.error || 'Failed to upload videos', 'error');
-          setSubmitting(false);
-          return;
-        }
-        videoUrls = videoResult.urls || [];
+      const [imageResult, videoResult] = await Promise.all([
+        hasImages
+          ? storageService.uploadMultipleImages(images)
+          : Promise.resolve({ success: true, urls: [] }),
+        hasVideos
+          ? storageService.uploadMultipleVideos(videos)
+          : Promise.resolve({ success: true, urls: [] }),
+      ]);
+
+      if (!imageResult.success) {
+        showToast(imageResult.error || 'Failed to upload images', 'error');
+        setSubmitting(false);
+        setUploadProgress('');
+        return;
+      }
+      if (!videoResult.success) {
+        showToast(videoResult.error || 'Failed to upload videos', 'error');
+        setSubmitting(false);
+        setUploadProgress('');
+        return;
       }
 
-      // Create post data
+      setUploadProgress('Publishing post...');
+
       const postData = {
         type: postType,
         title: title.trim(),
@@ -228,21 +239,24 @@ const CreatePostScreen = () => {
         status: 'active',
       };
 
-      // Create post with images and videos
-      showToast('Creating post...', 'info');
-      const result = await postService.createPost(postData, imageUrls, videoUrls);
+      const result = await postService.createPost(
+        postData,
+        imageResult.urls || [],
+        videoResult.urls || []
+      );
 
       if (result.success) {
-        // Navigate to success screen
         navigation.replace('PostSuccess', { postId: result.data.id, postType });
       } else {
         showToast(result.error || 'Failed to create post', 'error');
         setSubmitting(false);
+        setUploadProgress('');
       }
     } catch (error) {
       console.error('Error creating post:', error);
       showToast('An error occurred while creating post', 'error');
       setSubmitting(false);
+      setUploadProgress('');
     }
   };
 
@@ -525,7 +539,14 @@ const CreatePostScreen = () => {
             disabled={submitting}
           >
             {submitting ? (
-              <ActivityIndicator color={colors.textInverse} />
+              <View style={styles.submittingRow}>
+                <ActivityIndicator color={colors.textInverse} />
+                {uploadProgress ? (
+                  <Text style={[styles.uploadProgressText, { color: colors.textInverse }]}>
+                    {uploadProgress}
+                  </Text>
+                ) : null}
+              </View>
             ) : (
               <Text style={[styles.submitButtonText, { color: colors.textInverse }]}>
                 Create Post
@@ -740,6 +761,15 @@ const styles = StyleSheet.create({
   submitButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  submittingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  uploadProgressText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

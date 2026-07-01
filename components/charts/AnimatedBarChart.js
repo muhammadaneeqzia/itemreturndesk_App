@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
-import { space } from '../../utils/layout';
+import { space } from '../../utils';
 
 const BAR_MAX = 132;
 const BAR_WIDTH = 36;

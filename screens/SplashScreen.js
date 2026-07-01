@@ -25,8 +25,8 @@ const SplashScreen = ({ exiting = false }) => {
   const bubbles = useRef(
     Array.from({ length: 15 }, (_, i) => {
       const initialSize = 20 + Math.random() * 60;
-      const initialX = Math.random() * width;
-      const initialY = Math.random() * height;
+      const initialX = Math.random() * width;   
+      const initialY = Math.random() * height;     
       return {
         id: i,
         translateX: new Animated.Value(0),
@@ -238,12 +238,12 @@ const SplashScreen = ({ exiting = false }) => {
               opacity: iconExitOpacity,
             }}
           >
-            <View style={[styles.logoTile, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.logoTile}>
               <Image
-                source={require('../assets/icon.png')}
+                source={require('../assets/app-icon.png')}
                 style={styles.logoImage}
-                resizeMode="cover"
-                accessibilityLabel="Item Return Desk app icon"
+                resizeMode="contain"
+                accessibilityLabel="Items Return Desk app icon"
               />
             </View>
           </Animated.View>
@@ -256,7 +256,7 @@ const SplashScreen = ({ exiting = false }) => {
               { color: colors.text, opacity: textOpacity },
             ]}
           >
-            Item Return Desk
+            Items Return Desk
           </Animated.Text>
 
           <Animated.View
@@ -318,16 +318,15 @@ const styles = StyleSheet.create({
   },
   /** App icon fills this tile — same outer size as before so entrance / exit animations match */
   logoTile: {
-    width: 120,
-    height: 120,
-    borderRadius: 28,
-    borderWidth: StyleSheet.hairlineWidth,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.22,
-    shadowRadius: 12,
+    width: 148,
+    height: 148,
+    borderRadius: 32,
     overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
   },
   logoImage: {
     width: '100%',

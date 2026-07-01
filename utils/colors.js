@@ -1,4 +1,3 @@
-// Light Theme — refined blues with clearer hierarchy
 export const lightTheme = {
   // Primary Colors
   primary: '#2563EB',
@@ -42,7 +41,6 @@ export const lightTheme = {
   shadow: 'rgba(37, 99, 235, 0.12)',
 };
 
-// Dark Theme — deep surfaces, readable accents
 export const darkTheme = {
   // Primary Colors
   primary: '#3B82F6',
@@ -85,9 +83,4 @@ export const darkTheme = {
   shadow: 'rgba(0, 0, 0, 0.45)',
 };
 
-// Export default theme (can be used for quick access)
-export default {
-  light: lightTheme,
-  dark: darkTheme,
-};
-
+export default { light: lightTheme, dark: darkTheme };

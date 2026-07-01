@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import AppIcon from './AppIcon';
-import { radii, space } from '../utils/layout';
+import { radii, space } from '../utils';
 
 const PasswordInput = ({
   label,

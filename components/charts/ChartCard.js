@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { radii, shadowSoft, space } from '../../utils/layout';
+import { radii, shadowSoft, space } from '../../utils';
 
 /**
  * @param {object} props

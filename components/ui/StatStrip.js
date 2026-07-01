@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { radii, space, shadowSoft } from '../../utils/layout';
+import { radii, space, shadowSoft } from '../../utils';
 
 const StatCell = ({ label, value, accentColor, colors }) => (
   <View

@@ -23,7 +23,6 @@ export function validateNewPassword(password, opts = {}) {
   return { ok: true };
 }
 
-
 export function validatePasswordMatch(password, confirm, opts) {
   const p = validateNewPassword(password, opts);
   if (!p.ok) return p;

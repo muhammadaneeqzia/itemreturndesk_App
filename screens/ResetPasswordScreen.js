@@ -16,7 +16,7 @@ import { useToast } from '../context/ToastContext';
 import BubblesBackground from '../components/BubblesBackground';
 import PasswordInput from '../components/PasswordInput';
 import { supabase } from '../lib/config/supabase';
-import { validatePasswordMatch } from '../lib/utils/authValidation';
+import { validatePasswordMatch } from '../utils';
 
 const ResetPasswordScreen = () => {
   const { colors } = useTheme();

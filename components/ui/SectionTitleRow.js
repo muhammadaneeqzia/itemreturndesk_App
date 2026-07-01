@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { space } from '../../utils/layout';
+import { space } from '../../utils';
 
 /**
  * Section heading with optional right-side actions (e.g. link).

@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import ScreenHeader from './ScreenHeader';
-import { space } from '../utils/layout';
+import { space } from '../utils';
 
 /**
  * Stack screen shell: back header + padded scroll body for help / legal pages.

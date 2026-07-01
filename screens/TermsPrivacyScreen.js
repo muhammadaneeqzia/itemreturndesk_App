@@ -2,7 +2,7 @@ import React from 'react';
 import { Text } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import SupportArticleLayout from '../components/SupportArticleLayout';
-import { supportDocStyles } from '../utils/supportDocStyles';
+import { supportDocStyles } from '../utils';
 
 const TermsPrivacyScreen = () => {
   const { colors } = useTheme();

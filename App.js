@@ -15,7 +15,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 const RootStack = createNativeStackNavigator();
 
-const SPLASH_MIN_MS = 2000;
+
+const SPLASH_MIN_MS = 2000; 
 const SPLASH_EXIT_MS = 520;
 
 const AppContent = () => {
@@ -39,10 +40,13 @@ const AppContent = () => {
     };
   }, [themeLoading, authLoading]);
 
+
+
   if (themeLoading || authLoading || showSplash) {
     return <SplashScreen exiting={splashExiting} />;
   }
 
+   
   return (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} />

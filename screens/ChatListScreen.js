@@ -17,7 +17,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { chatService } from '../lib/services/chats/chatService';
 import AppIcon from '../components/AppIcon';
 import ScreenHeader from '../components/ScreenHeader';
-import { radii, shadowSoft, space } from '../utils/layout';
+import { radii, shadowSoft, space } from '../utils';
 import { CHATS_CONVERSATIONS_REFRESH, CHATS_CONVERSATION_READ } from '../lib/appEvents';
 import { useToast } from '../context/ToastContext';
 

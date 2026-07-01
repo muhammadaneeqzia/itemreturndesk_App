@@ -18,7 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { messageService } from '../lib/services/messages/messageService';
 import ScreenHeader from '../components/ScreenHeader';
-import { radii, shadowSoft, space } from '../utils/layout';
+import { radii, shadowSoft, space } from '../utils';
 
 const ChatScreen = () => {
   const { colors } = useTheme();

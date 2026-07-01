@@ -17,7 +17,7 @@ import { useAppModal } from '../context/ModalContext';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AppIcon from '../components/AppIcon';
 import ScreenHeader from '../components/ScreenHeader';
-import { radii, shadowSoft, space } from '../utils/layout';
+import { radii, shadowSoft, space } from '../utils';
 
 const { width } = Dimensions.get('window');
 

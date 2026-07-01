@@ -14,7 +14,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { postService } from '../lib/services/posts/postService';
-import { space } from '../utils/layout';
+import { space } from '../utils';
 import {
   WelcomeHero,
   StatStrip,

@@ -16,7 +16,7 @@ import { useAppModal } from '../context/ModalContext';
 import { authService } from '../lib/services/auth/authService';
 import AppIcon from '../components/AppIcon';
 import ScreenHeader from '../components/ScreenHeader';
-import { radii, shadowSoft, space } from '../utils/layout';
+import { radii, shadowSoft, space } from '../utils';
 
 const SettingsScreen = () => {
   const { colors, isDark, toggleTheme } = useTheme();

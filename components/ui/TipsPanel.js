@@ -1,6 +1,6 @@
 import React, { Fragment } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { radii, space, shadowSoft } from '../../utils/layout';
+import { radii, space, shadowSoft } from '../../utils';
 import AppIcon from '../AppIcon';
 
 const TipRow = ({ iconName, iconColor, text, colors }) => (

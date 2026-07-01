@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { G, Path, Circle } from 'react-native-svg';
 import { pieSlicePath, START_ANGLE } from './chartMath';
-import { space } from '../../utils/layout';
+import { space } from '../../utils';
 
 const SIZE = 200;
 const CX = SIZE / 2;

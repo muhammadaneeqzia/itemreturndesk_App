@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import AppIcon from './AppIcon';
-import { space, shadowSoft } from '../utils/layout';
+import { space, shadowSoft } from '../utils';
 
 /**
  * Consistent top bar: safe area, optional back, title / subtitle, optional right action.

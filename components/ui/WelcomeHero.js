@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { radii, space } from '../../utils/layout';
+import { radii, space } from '../../utils';
 
 /**
  * Gradient welcome header with soft decorative shapes.

@@ -17,7 +17,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { postService } from '../lib/services/posts/postService';
 import { useAppModal } from '../context/ModalContext';
 import AppIcon from '../components/AppIcon';
-import { radii, space, shadowSoft } from '../utils/layout';
+import { radii, space, shadowSoft } from '../utils';
 import { ChartCard, SegmentedDonutChart } from '../components/charts';
 
 const ProfileScreen = () => {

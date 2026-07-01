@@ -12,20 +12,25 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useToast } from '../context/ToastContext';
+import { useAppModal } from '../context/ModalContext';
 import FilterModal from '../components/FilterModal';
 import { postService } from '../lib/services/posts/postService';
+import { openPostChat } from '../lib/postChat';
 import AppIcon from '../components/AppIcon';
 import ScreenHeader from '../components/ScreenHeader';
-import { radii, shadowSoft, space } from '../utils/layout';
+import { radii, shadowSoft, space } from '../utils';
 
 const { width } = Dimensions.get('window');
 
 const LostPostsScreen = () => {
   const { colors } = useTheme();
+  const { user } = useAuth();
   const navigation = useNavigation();
   const { showToast } = useToast();
+  const { showModal } = useAppModal();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -101,14 +106,23 @@ const LostPostsScreen = () => {
     return filtered;
   }, [posts, searchQuery]);
 
-  const renderPostCard = ({ item }) => (
+  const handleChat = async (item, e) => {
+    e?.stopPropagation?.();
+    await openPostChat({ post: item, user, navigation, showToast, showModal });
+  };
+
+  const renderPostCard = ({ item }) => {
+    const thumb = item.image || item.post_images?.[0]?.image_url;
+    const isOwn = item.user_id === user?.id;
+
+    return (
     <TouchableOpacity
       style={[styles.postCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
       onPress={() => navigation.navigate('Details', { postId: item.id })}
     >
       <View style={[styles.imageContainer, { backgroundColor: colors.background }]}>
-        {item.image ? (
-          <Image source={{ uri: item.image }} style={styles.postImage} />
+        {thumb ? (
+          <Image source={{ uri: thumb }} style={styles.postImage} />
         ) : (
           <View style={styles.placeholderImage}>
             <AppIcon name="image" size={36} color={colors.textTertiary} />
@@ -145,22 +159,27 @@ const LostPostsScreen = () => {
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={[styles.claimButton, { backgroundColor: colors.primary }]}
-            onPress={() => navigation.navigate('Contact', { post: item })}
+            onPress={(e) => handleChat(item, e)}
           >
+            <AppIcon name="chatbubbles" size={18} color={colors.textInverse} style={{ marginRight: 6 }} />
             <Text style={[styles.claimButtonText, { color: colors.textInverse }]}>
-              Contact Finder
+              {isOwn ? 'Messages' : 'Chat'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.reportButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            onPress={() => navigation.navigate('ReportPost', { post: item })}
+            onPress={(e) => {
+              e.stopPropagation();
+              navigation.navigate('ReportPost', { post: item });
+            }}
           >
             <AppIcon name="warning" size={22} color={colors.error} />
           </TouchableOpacity>
         </View>
       </View>
     </TouchableOpacity>
-  );
+    );
+  };
 
   const handleApplyFilters = (newFilters) => {
     setFilters(newFilters);
@@ -389,9 +408,11 @@ const styles = StyleSheet.create({
   },
   claimButton: {
     flex: 1,
+    flexDirection: 'row',
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

@@ -16,7 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import BubblesBackground from '../components/BubblesBackground';
 import AppIcon from '../components/AppIcon';
-import { EMAIL_REGEX, normalizeEmail } from '../lib/utils/authValidation';
+import { EMAIL_REGEX, normalizeEmail } from '../utils';
 
 const ForgotPasswordScreen = ({ navigation }) => {
   const { colors } = useTheme();

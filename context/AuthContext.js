@@ -7,7 +7,7 @@ import {
   parseAuthParamsFromUrl,
   applySessionFromAuthUrl,
 } from '../lib/services/auth/passwordRecovery';
-import { normalizeEmail } from '../lib/utils/authValidation';
+import { normalizeEmail } from '../utils';
 import { STORAGE_PASSWORD_RECOVERY_PENDING } from '../lib/config/storageKeys';
 
 const AuthContext = createContext();
@@ -306,6 +306,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUserProfile = useCallback(async (fields) => {
+    const uid = user?.id;
+    if (!uid) {
+      return { success: false, error: 'Not signed in' };
+    }
+    const result = await authService.updateUserProfile(uid, fields);
+    if (result.success && result.user) {
+      setUser(result.user);
+    }
+    return result;
+  }, [user?.id]);
+
   const value = {
     isAuthenticated,
     user,
@@ -316,6 +328,7 @@ export const AuthProvider = ({ children }) => {
     signup,
     logout,
     checkAuth,
+    updateUserProfile,
     requestPasswordReset,
     completePasswordRecovery,
     cancelPasswordRecovery,

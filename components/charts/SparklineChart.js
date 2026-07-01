@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
-import { space } from '../../utils/layout';
+import { space } from '../../utils';
 
 const PAD = 10;
 const DEFAULT_H = 96;

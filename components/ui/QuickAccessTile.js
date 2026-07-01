@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { radii, space, shadowSoft } from '../../utils/layout';
+import { radii, space, shadowSoft } from '../../utils';
 import AppIcon from '../AppIcon';
 
 /**

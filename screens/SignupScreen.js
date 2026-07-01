@@ -16,7 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import BubblesBackground from '../components/BubblesBackground';
 import PasswordInput from '../components/PasswordInput';
-import { radii, shadowSoft, space } from '../utils/layout';
+import { radii, shadowSoft, space } from '../utils';
 
 const { width } = Dimensions.get('window');
 

@@ -27,7 +27,7 @@ const OnboardingScreen = ({ navigation }) => {
 
         {/* App Info */}
         <Text style={[styles.title, { color: colors.text }]}>
-          Item Return Desk
+          Items Return Desk
         </Text>
         
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>

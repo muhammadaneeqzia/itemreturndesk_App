@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../context/ThemeContext';
@@ -17,11 +18,14 @@ import { useNavigation } from '@react-navigation/native';
 import { useAppModal } from '../context/ModalContext';
 import AppIcon from '../components/AppIcon';
 import ScreenHeader from '../components/ScreenHeader';
-import { radii, shadowSoft, space } from '../utils/layout';
+import { radii, shadowSoft, space } from '../utils';
+import { userService } from '../lib/services/users/userService';
+
+const isRemoteImageUri = (uri) => typeof uri === 'string' && /^https?:\/\//i.test(uri);
 
 const EditProfileScreen = () => {
   const { colors } = useTheme();
-  const { user } = useAuth();
+  const { user, updateUserProfile } = useAuth();
   const navigation = useNavigation();
   const { showAlert, showModal } = useAppModal();
   
@@ -30,8 +34,9 @@ const EditProfileScreen = () => {
   const [phone, setPhone] = useState('');
   const [bio, setBio] = useState('');
   const [location, setLocation] = useState('');
-  const [profileImage, setProfileImage] = useState(user?.profileImage || null);
+  const [profileImage, setProfileImage] = useState(user?.avatar_url || null);
   const [uploadedVideo, setUploadedVideo] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     // Request permissions on mount
@@ -57,43 +62,59 @@ const EditProfileScreen = () => {
       setPhone(user.phone || '');
       setBio(user.bio || '');
       setLocation(user.location || '');
-      setProfileImage(user.profileImage || null);
+      setProfileImage(user.avatar_url || null);
     }
   }, [user]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!fullName.trim()) {
       showAlert('Error', 'Please enter your full name');
       return;
     }
-    
+
     if (!email.trim()) {
       showAlert('Error', 'Please enter your email');
       return;
     }
 
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       showAlert('Error', 'Please enter a valid email address');
       return;
     }
 
-    // TODO: Implement API call to update profile
-    // Include profileImage and uploadedVideo in the update
-    const profileData = {
-      name: fullName,
-      email: email,
-      phone: phone,
-      bio: bio,
-      location: location,
-      profileImage: profileImage,
-      video: uploadedVideo,
-    };
+    if (!user?.id) {
+      showAlert('Error', 'You must be signed in to update your profile');
+      return;
+    }
 
-    console.log('Profile data to save:', profileData);
-    
-    showAlert('Success', 'Profile updated successfully!', () => navigation.goBack());
+    setSaving(true);
+    try {
+      if (profileImage && profileImage !== user.avatar_url && !isRemoteImageUri(profileImage)) {
+        const upload = await userService.uploadAvatar(user.id, profileImage, 'image/jpeg');
+        if (!upload.success) {
+          showAlert('Error', upload.error || 'Failed to upload photo');
+          return;
+        }
+      }
+
+      const result = await updateUserProfile({
+        name: fullName.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        bio: bio.trim(),
+        location: location.trim(),
+      });
+
+      if (!result.success) {
+        showAlert('Error', result.error || 'Could not update profile');
+        return;
+      }
+
+      showAlert('Success', 'Profile updated successfully!', () => navigation.goBack());
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleChangePhoto = () => {
@@ -376,10 +397,15 @@ const EditProfileScreen = () => {
           <TouchableOpacity
             style={[styles.saveButton, { backgroundColor: colors.primary }]}
             onPress={handleSave}
+            disabled={saving}
           >
-            <Text style={[styles.saveButtonText, { color: colors.textInverse }]}>
-              Save Changes
-            </Text>
+            {saving ? (
+              <ActivityIndicator color={colors.textInverse} />
+            ) : (
+              <Text style={[styles.saveButtonText, { color: colors.textInverse }]}>
+                Save Changes
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>

@@ -2,9 +2,8 @@ import React from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import SupportArticleLayout from '../components/SupportArticleLayout';
-import { supportDocStyles } from '../utils/supportDocStyles';
+import { supportDocStyles, space } from '../utils';
 import AppIcon from '../components/AppIcon';
-import { space } from '../utils/layout';
 
 const APP_VERSION = '1.0.0';
 
@@ -18,7 +17,7 @@ const AboutAppScreen = () => {
         <View style={[styles.iconWrap, { backgroundColor: colors.primary + '18' }]}>
           <AppIcon name="cube" size={40} color={colors.primary} />
         </View>
-        <Text style={[styles.appName, { color: colors.text }]}>Item Return Desk</Text>
+        <Text style={[styles.appName, { color: colors.text }]}>Items Return Desk</Text>
         <Text style={[styles.version, { color: colors.textTertiary }]}>Version {APP_VERSION}</Text>
       </View>
 
@@ -33,7 +32,7 @@ const AboutAppScreen = () => {
       </Text>
 
       <Text style={[s.paragraph, { color: colors.textTertiary, fontSize: 13 }]}>
-        © {new Date().getFullYear()} Item Return Desk. All rights reserved.
+        © {new Date().getFullYear()} Items Return Desk. All rights reserved.
       </Text>
     </SupportArticleLayout>
   );

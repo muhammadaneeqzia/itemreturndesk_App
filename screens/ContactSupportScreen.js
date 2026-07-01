@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, TouchableOpacity, Linking, Platform } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import SupportArticleLayout from '../components/SupportArticleLayout';
-import { supportDocStyles } from '../utils/supportDocStyles';
+import { supportDocStyles } from '../utils';
 import { SUPPORT_EMAIL } from '../lib/supportContact';
 
 const ContactSupportScreen = () => {
@@ -10,9 +10,9 @@ const ContactSupportScreen = () => {
   const s = supportDocStyles;
 
   const openMail = () => {
-    const subject = encodeURIComponent('Item Return Desk — Support');
+    const subject = encodeURIComponent('Items Return Desk — Support');
     const body = encodeURIComponent(
-      `Please describe your issue:\n\n\n—\nApp: Item Return Desk\nPlatform: ${Platform.OS}\n`
+      `Please describe your issue:\n\n\n—\nApp: Items Return Desk\nPlatform: ${Platform.OS}\n`
     );
     Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`);
   };

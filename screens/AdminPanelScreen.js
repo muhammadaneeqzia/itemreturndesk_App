@@ -14,7 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAppModal } from '../context/ModalContext';
 import AppIcon from '../components/AppIcon';
 import ScreenHeader from '../components/ScreenHeader';
-import { radii, shadowSoft, space } from '../utils/layout';
+import { radii, shadowSoft, space } from '../utils';
 import { ChartCard, SparklineChart, AnimatedBarChart } from '../components/charts';
 
 const screenW = Dimensions.get('window').width;

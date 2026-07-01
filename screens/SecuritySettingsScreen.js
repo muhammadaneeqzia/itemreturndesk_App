@@ -2,7 +2,7 @@ import React from 'react';
 import { Text } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import SupportArticleLayout from '../components/SupportArticleLayout';
-import { supportDocStyles } from '../utils/supportDocStyles';
+import { supportDocStyles } from '../utils';
 
 const SecuritySettingsScreen = () => {
   const { colors } = useTheme();
@@ -24,7 +24,7 @@ const SecuritySettingsScreen = () => {
 
       <Text style={[s.sectionTitle, { color: colors.text }]}>Phishing & scams</Text>
       <Text style={[s.paragraph, { color: colors.textSecondary }]}>
-        Item Return Desk will not ask for your password by email or chat. Be cautious of users asking to move
+        Items Return Desk will not ask for your password by email or chat. Be cautious of users asking to move
         the conversation off-app too quickly or requesting money outside agreed tips; report suspicious posts
         from the post menu when available.
       </Text>

@@ -2,7 +2,7 @@ import React from 'react';
 import { TouchableOpacity, StyleSheet, View } from 'react-native';
 import AppIcon from '../AppIcon';
 import { LinearGradient } from 'expo-linear-gradient';
-import { shadowMedium } from '../../utils/layout';
+import { shadowMedium } from '../../utils';
 
 /**
  * Primary floating action for creating a post.

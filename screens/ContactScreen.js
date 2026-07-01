@@ -22,7 +22,7 @@ import { userService } from '../lib/services/users/userService';
 import MatchingSuggestions from '../components/MatchingSuggestions';
 import AppIcon from '../components/AppIcon';
 import ScreenHeader from '../components/ScreenHeader';
-import { radii, shadowSoft, space } from '../utils/layout';
+import { radii, shadowSoft, space } from '../utils';
 
 const { width } = Dimensions.get('window');
 
@@ -386,7 +386,7 @@ const ContactScreen = () => {
         )}
 
         {/* Action Buttons */}
-        {!isOwnPost && contactInfo && (
+        {!isOwnPost && (
           <View style={styles.actionButtonsContainer}>
             {contactInfo.phone && (
               <>
